@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Meson",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build_release/compilation_commands.json"
+        }
+    ],
+    "version": 4
+}
