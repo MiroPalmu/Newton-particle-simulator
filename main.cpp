@@ -7,11 +7,12 @@
 // This is just to suppress warings 
 #include ".vscode/suppress_intellisense_warnings.hpp"
 
-
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include "NewtonPointSimulation.hpp"
 
 // Forward declaring our helper function to read compiled shader
 static std::vector<uint32_t> readShader(const std::string shader_path);
@@ -19,6 +20,7 @@ static std::vector<uint32_t> readShader(const std::string shader_path);
 
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
+    auto simulator = NPS::NewtonPointSimulation<units::isq::si::metre, units::isq::si::kilogram, units::isq::si::second>{};
 
 }
 

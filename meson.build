@@ -21,7 +21,7 @@ foreach pkg_name, conan_ref : conan_pkgs
     deps += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
 endforeach
 
-src = ['main.cpp', 'NPS.cpp']
+src = ['main.cpp', 'NewtonPointSimulation.cpp']
 
 executable('nps', src, dependencies: deps)
 
