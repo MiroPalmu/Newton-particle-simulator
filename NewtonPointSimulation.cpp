@@ -1,5 +1,5 @@
 #include "NewtonPointSimulation.hpp"
 
-namespace NPS {
+namespace nps {
     
 }

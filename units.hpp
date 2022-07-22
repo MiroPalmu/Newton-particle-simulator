@@ -7,8 +7,9 @@
 #include <units/isq/si/length.h>
 #include <units/isq/si/mass.h>
 #include <units/isq/si/time.h>
+#include <units/isq/si/speed.h>
 
-namespace NPS {
+namespace nps {
     
     using namespace units;
     using namespace units::isq;
@@ -17,6 +18,8 @@ namespace primitive_types {
     using real = double;
 
 }
+
+    
 
     // Time:
     struct simulation_time_kind : kind<simulation_time_kind, si::dim_time> {};
@@ -29,7 +32,7 @@ namespace primitive_types {
     // Mass:
     struct particle_mass_kind : kind<particle_mass_kind, si::dim_mass> {};
 
-    template<UnitOf<si::dim_mass> M>
+    template<UnitOf<si::dim_mass> M> 
     using particle_mass_t = quantity_kind<particle_mass_kind, M, primitive_types::real>;
 
 
@@ -53,5 +56,26 @@ namespace primitive_types {
 
     template<UnitOf<si::dim_length> L>
     using z_t = quantity_point_kind<z_coordinate_point_kind, L, primitive_types::real>;
+
+    // Velocity:
+    
+    struct x_speed_kind : kind<x_speed_kind, si::dim_speed> {};
+    struct y_speed_kind : kind<y_speed_kind, si::dim_speed> {};
+    struct z_speed_kind : kind<z_speed_kind, si::dim_speed> {};
+
+    struct x_speed_point_kind : point_kind<x_speed_point_kind, x_speed_kind> {};
+    struct y_speed_point_kind : point_kind<y_speed_point_kind, y_speed_kind> {};
+    struct z_speed_point_kind : point_kind<z_speed_point_kind, z_speed_kind> {};
+
+    template<UnitOf<si::dim_speed> V>
+    using v_x_t = quantity_point_kind<x_speed_point_kind, V, primitive_types::real>;
+
+    template<UnitOf<si::dim_speed> V>
+    using v_y_t = quantity_point_kind<y_speed_point_kind, V, primitive_types::real>;
+
+    template<UnitOf<si::dim_speed> V>
+    using v_z_t = quantity_point_kind<z_speed_point_kind, V, primitive_types::real>;
+
+
     
 }
