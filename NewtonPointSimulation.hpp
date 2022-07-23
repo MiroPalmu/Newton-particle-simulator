@@ -1,5 +1,7 @@
 #pragma once
-#include "fmt/core.h"
+#define FMT_HEADER_ONLY
+
+#include "fmt/format.h"
 #include "units/isq/si/acceleration.h"
 #include "units/isq/si/constants.h"
 #include "units/isq/si/force.h"
@@ -122,6 +124,7 @@ class NewtonPointSimulation {
             }
             fmt::print("\n");
         }
+        fmt::print("\033[{}A", height_in_pixels);
     }
 
     // The most basic implementation
