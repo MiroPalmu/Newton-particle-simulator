@@ -9,10 +9,15 @@
 #include "units/isq/si/mass.h"
 #include "units/isq/si/time.h"
 #include "units/quantity_io.h"
+#include <algorithm>
+#include <array>
+#include <chrono>
 #include <iostream>
 #include <ranges>
 #include <string>
 #include <vector>
+
+#include <ANSI.hpp>
 
 namespace nps {
 using namespace units;
@@ -46,7 +51,35 @@ class NewtonPointSimulation {
                                      si::time<si::second> { 1 } / si::time<si::second> { 1 };
     static constexpr dimensionless<one> G_dimensioless_ { 1.0e-2 }; // Real value: 6.6743e-11
 
+    using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+    time_point timing_clock_;
+
+    std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
+
   public:
+    void start_clock() { timing_clock_ = std::chrono::steady_clock::now(); }
+
+    void stop_clock() {
+        const auto end_clock_time_ = std::chrono::steady_clock::now();
+
+        std::ranges::rotate(last_n_clocked_times_, last_n_clocked_times_.begin() + 1);
+        last_n_clocked_times_.back() =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_clock_time_ - timing_clock_);
+    }
+
+    std::chrono::milliseconds calculation_time_average_() {
+        std::chrono::milliseconds sum_of_clocked_times {};
+
+        for (auto time : last_n_clocked_times_) {
+            sum_of_clocked_times += time;
+        }
+
+        const auto average_over_last_n_times_in_ms_ =
+            double(sum_of_clocked_times.count()) / double(last_n_clocked_times_.size());
+
+        return std::chrono::milliseconds(size_t(average_over_last_n_times_in_ms_));
+    }
+
     void set_x_coordinates_from_doubles(const std::vector<double>& raw_x_coordniates) {
         x_coordinates_.clear();
         for (const auto x_raw : raw_x_coordniates) {
@@ -124,8 +157,13 @@ class NewtonPointSimulation {
             }
             fmt::print("\n");
         }
-        // Ansi escape code to move cursor up height_in_pixels rows
-        fmt::print("\033[{}A", height_in_pixels);
+
+        fmt::print("{}\r", ansi::str(ansi::clrline()));
+
+        // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
+        fmt::print("n: {}, T: {}ms", particles, calculation_time_average_().count());
+
+        fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)),  ansi::str(ansi::cursorup(height_in_pixels)));
     }
 
     // The most basic implementation

@@ -7,6 +7,10 @@
 // This is just to suppress warings
 #include ".vscode/suppress_intellisense_warnings.hpp"
 
+#define FMT_HEADER_ONLY
+#include "ANSI.hpp"
+#include "fmt/format.h"
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -18,7 +22,8 @@
 #include <thread>
 
 // Forward declaring our helper function to read compiled shader
-static std::vector<uint32_t> readShader(const std::string shader_path);
+static std::vector<uint32_t>
+readShader(const std::string shader_path);
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 
     using namespace units;
@@ -57,7 +62,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 
     for (size_t i { 0 }; i < 1000; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        simulator.start_clock();
         simulator.evolve_with_cpu_1();
+        simulator.stop_clock();
         simulator.draw();
     }
 }
