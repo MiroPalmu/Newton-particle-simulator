@@ -56,6 +56,8 @@ class NewtonPointSimulation {
 
     std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
 
+    static constexpr auto default_draw_area_side_length_ { 10.0 };
+
   public:
     void start_clock() { timing_clock_ = std::chrono::steady_clock::now(); }
 
@@ -123,18 +125,21 @@ class NewtonPointSimulation {
         std::cout << "y: " << y_coordinates_[i] << " " << y_speeds_[i] << "\n";
     }
 
-    void draw(si::length<coordinate_unit> x_min = si::length<coordinate_unit>(si::length<coordinate_unit> { -10.0 }),
-              si::length<coordinate_unit> x_max = si::length<coordinate_unit>(si::length<coordinate_unit> { 10.0 }),
-              si::length<coordinate_unit> y_min = si::length<coordinate_unit>(si::length<coordinate_unit> { -10.0 }),
-              si::length<coordinate_unit> y_max = si::length<coordinate_unit>(si::length<coordinate_unit> { 10.0 })) {
-        // height / width
-        constexpr auto aspect_ratio = 2.0;
+    void draw(si::length<coordinate_unit> x_min = si::length<coordinate_unit>(si::length<coordinate_unit> {
+                  -default_draw_area_side_length_ / 2.0 }),
+              si::length<coordinate_unit> x_max = si::length<coordinate_unit>(si::length<coordinate_unit> {
+                  default_draw_area_side_length_ / 2.0 }),
+              si::length<coordinate_unit> y_min = si::length<coordinate_unit>(si::length<coordinate_unit> {
+                  -default_draw_area_side_length_ / 2.0 }),
+              si::length<coordinate_unit> y_max = si::length<coordinate_unit>(si::length<coordinate_unit> {
+                  default_draw_area_side_length_ / 2.0 })) {
 
         const auto width = x_max - x_min;
         const auto height = y_max - y_min;
 
-        const auto width_in_pixels = aspect_ratio * width.number();
-        const auto height_in_pixels = height.number();
+        static constexpr auto aspect_ratio /* = width / height */= 2.0;
+        static constexpr auto height_in_pixels = 10;
+        static constexpr auto width_in_pixels = int(std::round(height_in_pixels * aspect_ratio));
 
         auto frame = std::vector<std::string>(width_in_pixels * height_in_pixels, " ");
 
@@ -163,7 +168,7 @@ class NewtonPointSimulation {
         // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
         fmt::print("n: {}, T: {}ms", particles, calculation_time_average_().count());
 
-        fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)),  ansi::str(ansi::cursorup(height_in_pixels)));
+        fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
     }
 
     // The most basic implementation

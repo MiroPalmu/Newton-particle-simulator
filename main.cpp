@@ -44,7 +44,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     std::uniform_real_distribution<> coordinate_dist(-5.0, 5.0);
     std::uniform_real_distribution<> speed_dist(-0.1, 0.1);
     std::uniform_real_distribution<> mass_dist(1.0, 1.1);
-    for (size_t i { 0 }; i < 1000; ++i) {
+    for (size_t i { 0 }; i < 5000; ++i) {
         testing_x_coords.push_back(coordinate_dist(gen));
         testing_y_coords.push_back(coordinate_dist(gen));
         testing_x_speeds.push_back(speed_dist(gen));
