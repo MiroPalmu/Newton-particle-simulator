@@ -124,6 +124,7 @@ class NewtonPointSimulation {
             }
             fmt::print("\n");
         }
+        // Ansi escape code to move cursor up height_in_pixels rows
         fmt::print("\033[{}A", height_in_pixels);
     }
 
