@@ -44,16 +44,18 @@ class NewtonPointSimulation {
     std::vector<si::mass<mass_unit>> masses_ {};
     si::time<time_unit> simulation_time_ { 0.0 };
 
-    si::time<time_unit> timestep_ { 1.0 };
+    si::time<time_unit> timestep_ { 1 };
 
+    static constexpr auto softeing_radius = si::length<coordinate_unit> { 0.1 };
+
+    // In two pieces for optimization purposes
     static constexpr auto G_units_ = si::length<si::metre> { 1 } * si::length<si::metre> { 1 } *
                                      si::length<si::metre> { 1 } / si::mass<si::kilogram> { 1 } /
                                      si::time<si::second> { 1 } / si::time<si::second> { 1 };
-    static constexpr dimensionless<one> G_dimensioless_ { 1.0e-2 }; // Real value: 6.6743e-11
+    static constexpr dimensionless<one> G_dimensioless_ { 0.34 }; // Real value: 6.6743e-11
 
     using time_point = std::chrono::time_point<std::chrono::steady_clock>;
     time_point timing_clock_;
-
     std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
 
     static constexpr auto default_draw_area_side_length_ { 10.0 };
@@ -137,8 +139,8 @@ class NewtonPointSimulation {
         const auto width = x_max - x_min;
         const auto height = y_max - y_min;
 
-        static constexpr auto aspect_ratio /* = width / height */= 2.0;
-        static constexpr auto height_in_pixels = 10;
+        static constexpr auto aspect_ratio /* = width / height */ = 2.0;
+        static constexpr auto height_in_pixels = 50;
         static constexpr auto width_in_pixels = int(std::round(height_in_pixels * aspect_ratio));
 
         auto frame = std::vector<std::string>(width_in_pixels * height_in_pixels, " ");
@@ -147,18 +149,29 @@ class NewtonPointSimulation {
         for (size_t i { 0 }; i < particles; ++i) {
             const auto x_screen_pos = (x_coordinates_[i] - x_min) / width;
             const auto y_screen_pos = (y_coordinates_[i] - y_min) / height;
+            /* Test if we are in frame */
             if (x_screen_pos.number() > 0 && x_screen_pos.number() < 1 && y_screen_pos.number() > 0 &&
                 y_screen_pos.number() < 1) {
                 const auto x_index = int(width_in_pixels * x_screen_pos.number());
                 const auto y_index = int(height_in_pixels * y_screen_pos.number());
 
-                frame[x_index + width_in_pixels * y_index] = "X";
+                const auto ansi_color_code_beginning =
+                    std::string { "\033[38;5;" } + std::to_string(i / 255) + std::string { "m" };
+                const auto ansi_color_code_ending = std::string { "\033[0m" };
+                // Test if there is special effects already on this pixel
+                if (masses_[i] < si::mass<mass_unit> { 2 } && frame[x_index + width_in_pixels * y_index] != "X") {
+                    frame[x_index + width_in_pixels * y_index] =
+                        ansi_color_code_beginning + "X" + ansi_color_code_ending;
+                } else {
+                    frame[x_index + width_in_pixels * y_index] =
+                        ansi_color_code_beginning + "O" + ansi_color_code_ending;
+                }
             }
         }
 
         for (size_t i { 0 }; i < height_in_pixels; ++i) {
             for (size_t j { 0 }; j < width_in_pixels; ++j) {
-                fmt::print(frame[j + i * width_in_pixels]);
+                std::cout << frame[j + i * width_in_pixels];
             }
             fmt::print("\n");
         }
@@ -166,13 +179,16 @@ class NewtonPointSimulation {
         fmt::print("{}\r", ansi::str(ansi::clrline()));
 
         // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
-        fmt::print("n: {}, T: {}ms", particles, calculation_time_average_().count());
+        fmt::print(
+            "n: {}, t: {:>5.2f}s, dt: {:>4}ms [units might be wrong. Automatic units when gcc implements std::format]",
+            particles, simulation_time_.number(), calculation_time_average_().count());
 
         fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
     }
 
     // The most basic implementation
     void evolve_with_cpu_1() {
+        simulation_time_ += timestep_;
         /*
                 std::cout << x_coordinates_.size() << "  " << y_coordinates_.size() << "  " << x_speeds_.size() << "  "
                           << y_speeds_.size() << "  " << masses_.size() << "\n";
@@ -191,7 +207,7 @@ class NewtonPointSimulation {
             for (size_t j { i + 1 }; j < particles; ++j) {
                 const Length auto d_x = x_coordinates_[j] - x_coordinates_[i];
                 const Length auto d_y = y_coordinates_[j] - y_coordinates_[i];
-                const auto d2 = d_x * d_x + d_y * d_y;
+                const auto d2 = d_x * d_x + d_y * d_y + softeing_radius * softeing_radius;
                 // G units business feels little jank
                 // Units are restricting optimizations and even trying to do them
                 // (hoping that G_units_ * gets optimized away by compiler)
