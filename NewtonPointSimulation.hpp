@@ -182,7 +182,7 @@ class NewtonPointSimulation {
 
         // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
         fmt::print(
-            "n: {}, t: {:>5.2f}s, dt: {:>4}ms [units might be wrong. Automatic units when gcc implements std::format]",
+            "n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms [units might be wrong, needs std::format]",
             particles, simulation_time_.number(), calculation_time_average_().count());
 
         fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));

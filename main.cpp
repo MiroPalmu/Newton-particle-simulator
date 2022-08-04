@@ -1,9 +1,3 @@
-/* #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#define KOMPUTE_LOG_LEVEL 5
-#include "../libs/kompute/single_include/kompute/Kompute.hpp"
-#pragma GCC diagnostic pop */
-
 #include <array>
 #include <fstream>
 #include <iostream>

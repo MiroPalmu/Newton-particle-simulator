@@ -7,6 +7,12 @@
 #include <random>
 #include <thread>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#define KOMPUTE_LOG_LEVEL 5
+#include "../libs/kompute/single_include/kompute/Kompute.hpp"
+#pragma GCC diagnostic pop
+
 namespace pasimulations {
 
 enum class Newton_point_simulation_implementations { cpu_1, gpu_1 };
