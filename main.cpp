@@ -1,82 +1,104 @@
-#pragma GCC diagnostic push
+/* #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #define KOMPUTE_LOG_LEVEL 5
 #include "../libs/kompute/single_include/kompute/Kompute.hpp"
-#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop */
 
-// This is just to suppress warings
-#include ".vscode/suppress_intellisense_warnings.hpp"
+#include <array>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <vector>
+
+#include "pasimulations.hpp"
 
 #define FMT_HEADER_ONLY
 #include "ANSI.hpp"
 #include "fmt/format.h"
-
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <chrono>
-#include <random>
-#include <thread>
-#include <numbers>
-
-#include "NewtonPointSimulation.hpp"
+#include "pasimulations.hpp"
+#include "tools.hpp"
+#include <cxxopts.hpp>
 
 // Forward declaring our helper function to read compiled shader
 static std::vector<uint32_t> readShader(const std::string shader_path);
-int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 
-    using namespace units;
-    using namespace units::isq;
+int main(int argc, char* argv[]) {
+    try {
 
-    auto simulator =
-        nps::NewtonPointSimulation<units::isq::si::metre, units::isq::si::kilogram, units::isq::si::second,
-                                   units::isq::si::metre_per_second, units::isq::si::metre_per_second_sq> {};
+        auto options = cxxopts::Options("pasimulations", "Collection of simulations");
 
-    auto testing_x_coords = std::vector<double> {};
-    auto testing_y_coords = std::vector<double> {};
-    auto testing_x_speeds = std::vector<double> {};
-    auto testing_y_speeds = std::vector<double> {};
-    auto testing_masses = std::vector<double> {};
+        // This needs to be held up to date manually
+        const auto simulation_names_for_help = std::vector<std::string> {
+            "newton_point_simulation"
+        }; // Can be made consexpr in gcc11 
 
-    std::random_device rd;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::normal_distribution<> coordinate_radius_dist(3, 2);
-    std::uniform_real_distribution<> coordinate_angle_dist(0.0, 2.0 * std::numbers::pi);
-    std::normal_distribution<> velocity_magnitude_dist(10.0, 0.1);
-    std::normal_distribution<> velocity_angle_dist(0, 0.0001);
-    std::uniform_real_distribution<> mass_dist(1.0, 1.0);
-    constexpr auto number_of_particles { 1500 };
-    for ([[maybe_unused]] auto dump : std::ranges::iota_view(0, number_of_particles)) {
-        const auto coordinate_radius = coordinate_radius_dist(gen);
-        const auto coordinate_angle = coordinate_angle_dist(gen);
-        testing_x_coords.push_back( coordinate_radius * std::cos(coordinate_angle));
-        testing_y_coords.push_back( coordinate_radius * std::sin(coordinate_angle));
+        // clang-format off
+        options
+        .positional_help("simulation runtype")
+        .set_width(70)
+        .set_tab_expansion()
+        .show_positional_help()
+        .add_options()
+        ("h,help", "Print usage")
+        ("simulation", fmt::format("Available simulations: {}", fmt::join(simulation_names_for_help, ", ")), cxxopts::value<std::string>()->default_value(""))
+        ("runtype", "Start a simulation with spesific runtype. To see available runtypes (eg. test) use list", cxxopts::value<std::string>()->default_value(""))
+        ;
+        // clang-format on
 
-        const auto velocity_magnitude = velocity_magnitude_dist(gen);
-        const auto velocity_angle = coordinate_angle + 0.5 * std::numbers::pi + velocity_angle_dist(gen);
-        testing_x_speeds.push_back(velocity_magnitude * std::cos(velocity_angle));
-        testing_y_speeds.push_back(velocity_magnitude * std::sin(velocity_angle));
-        // testing_x_speeds.push_back(0.0);
-        // testing_y_speeds.push_back(0.0);
-        testing_masses.push_back(mass_dist(gen));
-    }
-    simulator.set_x_coordinates_from_doubles(testing_x_coords);
-    simulator.set_y_coordinates_from_doubles(testing_y_coords);
-    simulator.set_x_speeds_from_doubles(testing_x_speeds);
-    simulator.set_y_speeds_from_doubles(testing_y_speeds);
-    simulator.set_masses_from_doubles(testing_masses);
-    simulator.set_timestep_from_double(0.001);
+        options.parse_positional({ "simulation", "runtype" });
 
-    for (size_t i { 0 }; i < 10000; ++i) {
-        if constexpr(number_of_particles < 1500) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        const auto result = options.parse(argc, argv);
+
+        const auto error_font = ansi::str(ansi::fg_brightred) + ansi::str(ansi::bold);
+
+        { // Local scope for special switch. This is not neccesseary with pattern matching
+            constexpr auto hash = [](const std::string_view data) noexcept {
+                uint32_t hash = 5381;
+
+                for (const auto letter : data)
+                    hash = ((hash << 5) + hash) + (unsigned char)letter;
+
+                return hash;
+            };
+            if (result.count("help") || !(result["simulation"].count() && result["runtype"].count())) {
+                fmt::print(options.help());
+            } else {
+                switch (hash(result["simulation"].as<std::string>())) {
+                case hash("newton_point_simulation"):
+
+                    switch (hash(result["runtype"].as<std::string>())) {
+                    case hash("test"):
+                        pasimulations::run_newton_point_simulation_test(1500);
+                        break;
+                    default:
+                        fmt::print("{}{}{} is not implemented\n", error_font, result["runtype"].as<std::string>(),
+                                   ansi::str(ansi::reset));
+                        fmt::print("Following runtypes available:\n");
+
+                        const auto runtypes_for_nps =
+                            std::vector<std::string> { "test" }; // Can be made consexpr in gcc11
+                        for (const auto& runtype : runtypes_for_nps) {
+                            fmt::print("\t{}\n", runtype);
+                        }
+                        break;
+                    }
+
+                    break;
+                default:
+                    fmt::print("{}{}{} is not implemented\n", error_font, result["simulation"].as<std::string>(),
+                               ansi::str(ansi::reset));
+                    fmt::print("Following simulations available:\n\t{}\n", fmt::join(simulation_names_for_help, "\n\t"));
+                    break;
+                }
+            }
         }
-        simulator.start_clock();
-        simulator.evolve_with_cpu_1();
-        simulator.stop_clock();
-        simulator.draw();
+    } catch (const std::exception& e) {
+        std::cout << "error parsing options: " << e.what() << std::endl;
+        return 1;
     }
+    return 0;
 }
 
 [[maybe_unused]] static std::vector<uint32_t> readShader(const std::string shader_path) {

@@ -3,7 +3,8 @@ project('Newton particle simulator', 'cpp', default_options : ['warning_level=3'
 
 conan_pkgs= {
     'mp-units':'mp-units/0.7.0@', # <- Must contain @, otherwise Conan will think it is a path
-    'fmt':'fmt/9.0.0@'    
+    'fmt':'fmt/9.0.0@',
+    'cxxopts' : 'cxxopts/3.0.0@'   
     
     # ... the dependency list goes on
 }
@@ -20,7 +21,7 @@ foreach pkg_name, conan_ref : conan_pkgs
     deps += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
 endforeach
 
-src = ['main.cpp']
+src = ['main.cpp', 'pasimulations.cpp']
 
 
 executable('nps', src, dependencies: deps)

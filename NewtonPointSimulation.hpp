@@ -19,6 +19,8 @@
 
 #include <ANSI.hpp>
 
+namespace pasimulations {
+
 namespace nps {
 using namespace units;
 using namespace units::isq;
@@ -44,7 +46,7 @@ class NewtonPointSimulation {
     std::vector<si::mass<mass_unit>> masses_ {};
     si::time<time_unit> simulation_time_ { 0.0 };
 
-    si::time<time_unit> timestep_ { 1 };
+    si::time<time_unit> timestep_ { 1 } ;
 
     static constexpr auto softeing_radius = si::length<coordinate_unit> { 0.1 };
 
@@ -254,3 +256,4 @@ class NewtonPointSimulation {
 };
 
 } // namespace nps
+} // namespace pas

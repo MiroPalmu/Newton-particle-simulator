@@ -1,0 +1,12 @@
+Longterm todo:
+
+1. GPU version of CPU 1
+2. Read https://academic.oup.com/mnras/article/374/4/1347/963634
+3. CPU 2 version from the paper
+(Maybe optimized version of CPU 2)
+4. GPU 2 ie. GPU version of CPU 2
+
+
+Comparisons between different command line options:
+https://attractivechaos.wordpress.com/2018/08/31/a-survey-of-argument-parsing-libraries-in-c-c/
+https://cpp.libhunt.com/cxxopts-alternatives
