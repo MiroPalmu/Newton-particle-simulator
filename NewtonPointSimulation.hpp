@@ -46,7 +46,7 @@ class NewtonPointSimulation {
     std::vector<si::mass<mass_unit>> masses_ {};
     si::time<time_unit> simulation_time_ { 0.0 };
 
-    si::time<time_unit> timestep_ { 1 } ;
+    si::time<time_unit> timestep_ { 1 };
 
     static constexpr auto softeing_radius = si::length<coordinate_unit> { 0.1 };
 
@@ -253,7 +253,8 @@ class NewtonPointSimulation {
             y_coordinates_[i] += y_speeds_[i] * timestep_;
         }
     }
+    void evolve_with_gpu_1() {}
 };
 
 } // namespace nps
-} // namespace pas
+} // namespace pasimulations

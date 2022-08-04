@@ -1,18 +1,18 @@
 #pragma once
 
 #include "NewtonPointSimulation.hpp"
-#include <concepts>
 #include <chrono>
-#include <random>
+#include <concepts>
 #include <numbers>
+#include <random>
 #include <thread>
-
 
 namespace pasimulations {
 
-    
+enum class Newton_point_simulation_implementations { cpu_1, gpu_1 };
 
-void run_newton_point_simulation_test(const std::integral auto number_of_particles) {
+void run_newton_point_simulation_test(const std::integral auto number_of_particles,
+                                      const Newton_point_simulation_implementations implementation) {
     using namespace units;
     using namespace units::isq;
 
@@ -59,7 +59,14 @@ void run_newton_point_simulation_test(const std::integral auto number_of_particl
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         simulator.start_clock();
-        simulator.evolve_with_cpu_1();
+        switch (implementation) {
+        case Newton_point_simulation_implementations::cpu_1:
+            simulator.evolve_with_cpu_1();
+            break;
+        case Newton_point_simulation_implementations::gpu_1:
+            simulator.evolve_with_gpu_1();
+            break;
+        }
         simulator.stop_clock();
         simulator.draw();
     }
