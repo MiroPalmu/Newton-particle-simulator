@@ -1,13 +1,4 @@
 #pragma once
-#define FMT_HEADER_ONLY
-
-#include "fmt/format.h"
-#include "units/isq/si/acceleration.h"
-#include "units/isq/si/constants.h"
-#include "units/isq/si/force.h"
-#include "units/isq/si/length.h"
-#include "units/isq/si/mass.h"
-#include "units/isq/si/time.h"
 #include "units/quantity_io.h"
 #include <algorithm>
 #include <array>
@@ -19,16 +10,25 @@
 
 #include <ANSI.hpp>
 
+#include "tools.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#define KOMPUTE_LOG_LEVEL 5
+#include "../libs/kompute/single_include/kompute/Kompute.hpp"
+#pragma GCC diagnostic pop
+
+#include "units/isq/si/acceleration.h"
+#include "units/isq/si/constants.h"
+#include "units/isq/si/force.h"
+#include "units/isq/si/length.h"
+#include "units/isq/si/mass.h"
+#include "units/isq/si/time.h"
 namespace pasimulations {
 
 namespace nps {
 using namespace units;
 using namespace units::isq;
-
-template <typename T>
-int sign(T val) {
-    return (T(0) < val) - (val < T(0));
-}
 
 /*
 Stores data as units from template arguments.
@@ -181,9 +181,9 @@ class NewtonPointSimulation {
         fmt::print("{}\r", ansi::str(ansi::clrline()));
 
         // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
-        fmt::print(
-            "n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms [units might be wrong, needs std::format]",
-            particles, simulation_time_.number(), calculation_time_average_().count());
+        fmt::print("n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms [units might be wrong, needs "
+                   "std::format]",
+                   particles, simulation_time_.number(), calculation_time_average_().count());
 
         fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
     }
@@ -218,8 +218,8 @@ class NewtonPointSimulation {
                 // This is also evading the purpose of units library
                 if (true || d2.number() > 0.2) {
 
-                    const auto d_x_hat = sign(d_x.number());
-                    const auto d_y_hat = sign(d_y.number());
+                    const auto d_x_hat = pasimulations::tools::sign(d_x.number());
+                    const auto d_y_hat = pasimulations::tools::sign(d_y.number());
                     x_accelerations[i] += d_x_hat * G_units_ * masses_[j] / d2;
                     y_accelerations[i] += d_y_hat * G_units_ * masses_[i] / d2;
                     x_accelerations[j] -= d_x_hat * G_units_ * masses_[j] / d2;
@@ -253,7 +253,24 @@ class NewtonPointSimulation {
             y_coordinates_[i] += y_speeds_[i] * timestep_;
         }
     }
-    void evolve_with_gpu_1() {}
+    void evolve_with_gpu_1() {
+        kp::Manager mgr {};
+
+        auto tensor_in_a = mgr.tensorT(std::vector<float> { 1, 2, 3 });
+        auto tensor_in_b = mgr.tensorT(std::vector<float> { 1, 2, 3 });
+
+        const std::vector<std::shared_ptr<kp::Tensor>> params { tensor_in_a, tensor_in_b };
+        std::shared_ptr<kp::Algorithm> algo =
+            mgr.algorithm(params, pasimulations::tools::readShader("testing.comp.spv"), { 1, 1, 1 });
+
+        mgr.sequence()
+            ->record<kp::OpTensorSyncDevice>(params)
+            ->record<kp::OpAlgoDispatch>(algo)
+            ->record<kp::OpTensorSyncLocal>(params)
+            ->eval();
+
+        fmt::print("{}", fmt::join(tensor_in_a->vector(), " "));
+    }
 };
 
 } // namespace nps

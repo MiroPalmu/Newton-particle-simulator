@@ -21,10 +21,13 @@ foreach pkg_name, conan_ref : conan_pkgs
     deps += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
 endforeach
 
+deps += dependency('vulkan')
+deps += dependency('fmt')
 src = ['main.cpp', 'pasimulations.cpp']
 
+object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
 
-executable('nps', src, dependencies: deps)
+executable('nps', src, dependencies: deps, objects: object_files)
 
 # Command to generate release build dir
 #CC=gcc-11 CXX=g++-11 meson setup build_release --buildtype=release

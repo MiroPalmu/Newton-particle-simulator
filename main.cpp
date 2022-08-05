@@ -6,17 +6,14 @@
 #include <type_traits>
 #include <vector>
 
-#include "pasimulations.hpp"
-
+#include <cxxopts.hpp>
 #define FMT_HEADER_ONLY
-#include "ANSI.hpp"
 #include "fmt/format.h"
 #include "pasimulations.hpp"
-#include "tools.hpp"
-#include <cxxopts.hpp>
 
-// Forward declaring our helper function to read compiled shader
-static std::vector<uint32_t> readShader(const std::string shader_path);
+#include "ANSI.hpp"
+#include "pasimulations.hpp"
+#include "tools.hpp"
 
 int main(int argc, char* argv[]) {
     try {
@@ -92,11 +89,4 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     return 0;
-}
-
-[[maybe_unused]] static std::vector<uint32_t> readShader(const std::string shader_path) {
-    std::ifstream fileStream(shader_path, std::ios::binary);
-    std::vector<char> buffer;
-    buffer.insert(buffer.begin(), std::istreambuf_iterator<char>(fileStream), {});
-    return { (uint32_t*)buffer.data(), (uint32_t*)(buffer.data() + buffer.size()) };
 }

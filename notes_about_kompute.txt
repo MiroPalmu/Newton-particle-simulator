@@ -1,0 +1,32 @@
+There is new pr on refactoring kompute build system. 
+These notes have been taken during the old build system.
+
+Kompute has to be configured with:
+
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DKOMPUTE_EXTRA_CXX_FLAGS="-DKOMPUTE_LOG_LEVEL=5" -DKOMPUTE_OPT_ENABLE_SPDLOG=0
+
+
+If you dont have CMAKE_BUILD_TYPE=Release KOMPUTE_EXTRA_CXX_FLAGS are not gonna be aplied (maybe)
+If CMAKE_BUILD_TYPE is Debug there is some assert in vulkan that fails
+
+
+To make Kompute work with meson build system one has to:
+
+1) Add vulkan and fmt (dependencies of vulkan) as meson dependencies
+
+	deps += dependency('vulkan')
+	deps += dependency('fmt')
+
+(We assume that vulkan and fmt are provided by system)
+
+2) There is some assert that fails in vulkan when we build kompute in debug mode
+
+3) Add libkompute.a as object file to meson executable
+
+	
+	object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
+
+	executable('nps', src, dependencies: deps, objects: object_files)
+
+
+I don't know how much importing vulkan and fmt with meson escpeially importing fmt twiche. With meson and with conan.
