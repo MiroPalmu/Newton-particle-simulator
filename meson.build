@@ -21,11 +21,14 @@ foreach pkg_name, conan_ref : conan_pkgs
     deps += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
 endforeach
 
+# For some reason these are needed for kompute
 deps += dependency('vulkan')
 deps += dependency('fmt')
-src = ['main.cpp', 'pasimulations.cpp']
 
 object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
+
+src = ['main.cpp', 'pasimulations.cpp']
+
 
 executable('nps', src, dependencies: deps, objects: object_files)
 
