@@ -1,6 +1,6 @@
 #pragma once
 
-#include "NewtonPointSimulation.hpp"
+#include <simulations/newton_point_simulation/NewtonPointSimulation.hpp>
 #include <chrono>
 #include <concepts>
 #include <numbers>

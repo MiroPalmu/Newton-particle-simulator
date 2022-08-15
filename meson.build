@@ -1,20 +1,49 @@
 project(
-    'Newton particle simulator',
+    'pasimulations',
     'cpp',
     default_options : ['warning_level=3', 'werror=true', 'optimization=3', 'cpp_std=c++20']
 )
 ####################################################################################################
-# Dependencies
+# Variables tracking sources and libraries
 ####################################################################################################
-deps = []
-# For some reason these are needed for kompute
-deps += dependency('vulkan')
-deps += dependency('fmt')
+# .cpp files (This might be used later for example clang-format)
+project_sources = []
+# Directories where compiler is able to include from
+project_include_directories = []
+
+# Currently unused:
+# .hpp files (This might be used later for example clang-format)
+project_header_files = [] 
+# This might replace external object files if useds 
+library_path = [] 
 
 ####################################################################################################
-# Source files
+# External object files
 ####################################################################################################
-src = ['main.cpp', 'pasimulations.cpp', 'NewtonPointSimulation.cpp']
+object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
+
+####################################################################################################
+# Dependencies
+####################################################################################################
+project_dependencies = []
+# For some reason these are needed for kompute
+project_dependencies += dependency('vulkan')
+project_dependencies += dependency('fmt')
+project_dependencies += dependency('threads')
+
+####################################################################################################
+# Implementation of pasimulations
+####################################################################################################
+subdir('src')
+subdir('include')
+
+project_include_directories += include_directories('include')
+
+############]########################################################################################
+# Shaders
+####################################################################################################
+subdir('shaders')
+
 ####################################################################################################
 # Conan
 ####################################################################################################
@@ -31,38 +60,24 @@ conan_pkgs= {
 
 conan_program = find_program(['conan'], required: true, native: true)
 
-deps+=dependency('threads')
 foreach pkg_name, conan_ref : conan_pkgs
     module_path = meson.current_build_dir() / 'conan-cmake' / pkg_name
     run_command(conan_program,'install',conan_ref, '-if',module_path,
         '-g','cmake_find_package', check: true)
-    deps += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
+    project_dependencies += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
 endforeach
 
-############]########################################################################################
-# Shaders
-####################################################################################################
-shader_compiler = find_program(['glslangValidator'], required: true, native: true)
-shader_sources = ['testing.comp']
-shader_targets = []
-foreach shader_source : shader_sources
-    shader_targets += custom_target(
-        'SPIR-V from @0@'.format(shader_source),
-        input: shader_source,
-        output: '@PLAINNAME@.spv',
-        command: [shader_compiler, '-V', '@INPUT@', '-o', '@OUTPUT@']
-    )
-endforeach
-src += shader_targets
-####################################################################################################
-# External object files
-####################################################################################################
-object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
 
 ####################################################################################################
 # Executable
 ####################################################################################################
-executable('nps', src, dependencies: deps, objects: object_files)
+executable(
+    'pasimulations',
+    project_sources,
+    include_directories: project_include_directories,
+    dependencies: project_dependencies,
+    objects: object_files
+)
 
 # Command to generate release build dir
 '''

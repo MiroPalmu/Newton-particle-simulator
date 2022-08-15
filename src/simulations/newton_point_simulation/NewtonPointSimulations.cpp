@@ -1,4 +1,4 @@
-#include "NewtonPointSimulation.hpp"
+#include <simulations/newton_point_simulation/NewtonPointSimulation.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
