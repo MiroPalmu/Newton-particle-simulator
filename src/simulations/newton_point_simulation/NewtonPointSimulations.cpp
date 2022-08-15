@@ -6,17 +6,17 @@
 #include "../libs/kompute/single_include/kompute/Kompute.hpp"
 #pragma GCC diagnostic pop
 
-#include "units/isq/si/acceleration.h"
-#include "units/isq/si/constants.h"
-#include "units/isq/si/force.h"
-#include "units/isq/si/length.h"
-#include "units/isq/si/mass.h"
-#include "units/isq/si/time.h"
+#include <units/isq/si/acceleration.h>
+#include <units/isq/si/constants.h>
+#include <units/isq/si/force.h>
+#include <units/isq/si/length.h>
+#include <units/isq/si/mass.h>
+#include <units/isq/si/time.h>
 
 #define FMT_HEADER_ONLY
-#include "fmt/format.h"
+#include <fmt/format.h>
 
-#include "ANSI.hpp"
+#include <ANSI.hpp>
 
 namespace pasimulations {
 
