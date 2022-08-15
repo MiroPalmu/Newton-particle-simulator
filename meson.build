@@ -44,15 +44,16 @@ endforeach
 ####################################################################################################
 shader_compiler = find_program(['glslangValidator'], required: true, native: true)
 shader_sources = ['testing.comp']
+shader_targets = []
 foreach shader_source : shader_sources
-    custom_target(
+    shader_targets += custom_target(
         'SPIR-V from @0@'.format(shader_source),
         input: shader_source,
         output: '@PLAINNAME@.spv',
         command: [shader_compiler, '-V', '@INPUT@', '-o', '@OUTPUT@']
     )
 endforeach
-
+src += shader_targets
 ####################################################################################################
 # External object files
 ####################################################################################################
