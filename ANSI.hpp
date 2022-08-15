@@ -4,9 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 // SOURCE: https://raw.githubusercontent.com/srilakshmikanthanp/ANSI/master/include/srilakshmikanthanp/ANSI.hpp
-
-#ifndef ANSI_HPP
-#define ANSI_HPP
+#pragma once
 
 #define _USE_MATH_DEFINES
 
@@ -31,7 +29,7 @@ namespace ansi {
 /**
  * @brief ansi to string
  */
-std::string str(std::ostream& (*manip)(std::ostream&)) {
+inline std::string str(std::ostream& (*manip)(std::ostream&)) {
     std::ostringstream stream("");
     stream << manip;
     return stream.str();
@@ -751,4 +749,3 @@ OSTREAM& notscript(OSTREAM& os) { return os << W("\033[75m"); }
 #undef OSTREAM
 #undef STRING
 #undef W
-#endif

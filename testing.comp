@@ -15,7 +15,7 @@ layout(binding = 1) buffer bufB { float b[3]; };
 
 
 // layout( push_constant ) uniform constants {
-//     ELEMENT_T p;
+//     ELEMENT_T;
 // };
 
 void main() {

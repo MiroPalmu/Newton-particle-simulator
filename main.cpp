@@ -9,12 +9,11 @@
 #include <cxxopts.hpp>
 #define FMT_HEADER_ONLY
 #include "fmt/format.h"
-#include "pasimulations.hpp"
 
-#include "ANSI.hpp"
 #include "pasimulations.hpp"
 #include "tools.hpp"
 
+#include "ANSI.hpp"
 int main(int argc, char* argv[]) {
     try {
 
