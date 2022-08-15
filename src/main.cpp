@@ -8,10 +8,10 @@
 
 #include <cxxopts.hpp>
 #define FMT_HEADER_ONLY
-#include "fmt/format.h"
+#include <fmt/format.h>
 
-#include "pasimulations.hpp"
-#include "tools.hpp"
+#include <pasimulations.hpp>
+#include <tools.hpp>
 
 #include <ANSI.hpp>
 int main(int argc, char* argv[]) {

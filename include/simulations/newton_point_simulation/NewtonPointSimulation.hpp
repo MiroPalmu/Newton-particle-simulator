@@ -14,14 +14,12 @@
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
-
-
-#include <units/quantity_io.h>
 #include <units/isq/si/constants.h>
 #include <units/isq/si/force.h>
 #include <units/isq/si/length.h>
 #include <units/isq/si/mass.h>
 #include <units/isq/si/time.h>
+#include <units/quantity_io.h>
 namespace pasimulations {
 
 namespace nps {
@@ -253,7 +251,6 @@ class NewtonPointSimulation {
     }
 
     void evolve_with_gpu_1();
-
 };
 
 } // namespace nps
