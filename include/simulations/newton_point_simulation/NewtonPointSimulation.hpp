@@ -28,12 +28,11 @@ using namespace units::isq;
 
 /*
 Stores data as units from template arguments.
-Primitive data type is defnied in units.hpp
  */
 template <UnitOf<si::dim_length> coordinate_unit, UnitOf<si::dim_mass> mass_unit, UnitOf<si::dim_time> time_unit,
           UnitOf<si::dim_speed> speed_unit, UnitOf<si::dim_acceleration> acceleration_unit>
 class NewtonPointSimulation {
-
+    // We assume (as it is default units) that underlying datatype is double!
   private:
     std::vector<si::length<coordinate_unit>> x_coordinates_ {};
     std::vector<si::length<coordinate_unit>> y_coordinates_ {};
