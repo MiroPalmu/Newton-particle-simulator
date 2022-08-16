@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <filesystem>
 
 namespace pasimulations {
 namespace tools {
@@ -24,8 +25,8 @@ constexpr auto hash(const std::string_view data) noexcept {
 }
 
 
-[[nodiscard]][[maybe_unused]]inline std::vector<uint32_t> readShader(const std::string shader_path) {
-    std::ifstream fileStream(shader_path, std::ios::binary);
+[[nodiscard]][[maybe_unused]]inline std::vector<uint32_t> readShader(const std::filesystem::path path_to_shader) {
+    std::ifstream fileStream(std::filesystem::canonical(path_to_shader).string(), std::ios::binary);
     std::vector<char> buffer;
     buffer.insert(buffer.begin(), std::istreambuf_iterator<char>(fileStream), {});
     return { (uint32_t*)buffer.data(), (uint32_t*)(buffer.data() + buffer.size()) };

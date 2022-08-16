@@ -9,7 +9,7 @@
 #include <units/isq/si/time.h>
 #include <units/isq/si/speed.h>
 
-namespace nps {
+namespace pasimulations {
     
     using namespace units;
     using namespace units::isq;

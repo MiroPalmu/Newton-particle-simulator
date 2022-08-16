@@ -3,6 +3,8 @@ project(
     'cpp',
     default_options : ['warning_level=3', 'werror=true', 'optimization=3', 'cpp_std=c++20']
 )
+
+
 ####################################################################################################
 # Variables tracking sources and libraries
 ####################################################################################################
@@ -17,10 +19,6 @@ project_header_files = []
 # This might replace external object files if useds 
 library_path = [] 
 
-####################################################################################################
-# External object files
-####################################################################################################
-object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
 
 ####################################################################################################
 # Dependencies
@@ -31,6 +29,39 @@ project_dependencies += dependency('vulkan')
 project_dependencies += dependency('fmt')
 project_dependencies += dependency('threads')
 
+
+####################################################################################################
+# Conan
+####################################################################################################
+conan_pkgs= {
+    # Names must match the package that cmake looks for
+    'mp-units': 'mp-units/0.7.0@', # <- Must contain @, otherwise Conan will think it is a path
+    'fmt': 'fmt/9.0.0@',
+    'cxxopts': 'cxxopts/3.0.0@',
+    'Microsoft.GSL': 'ms-gsl/4.0.0@'
+    
+    # ... the dependency list goes on
+}
+# Adding new dependencies to this dict is error-free, but if you 
+# change an existing entry, e.g. the pakage version, you probably need
+# `meson configure --clearcache` to let new setting takes effect.
+
+conan_program = find_program(['conan'], required: true, native: true)
+
+foreach pkg_name, conan_ref : conan_pkgs
+    module_path = meson.current_build_dir() / 'conan-cmake' / pkg_name
+    run_command(conan_program, 'install', conan_ref, '-if', module_path,
+        '-g', 'cmake_find_package', check: true)
+    project_dependencies += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
+endforeach
+
+
+
+
+####################################################################################################
+# External object files
+####################################################################################################
+object_files = ['/home/pamiro/koodaus/cpp/libs/kompute/build/src/libkompute.a']
 ####################################################################################################
 # Implementation of pasimulations
 ####################################################################################################
@@ -43,30 +74,6 @@ project_include_directories += include_directories('include')
 # Shaders
 ####################################################################################################
 subdir('shaders')
-
-####################################################################################################
-# Conan
-####################################################################################################
-conan_pkgs= {
-    'mp-units':'mp-units/0.7.0@', # <- Must contain @, otherwise Conan will think it is a path
-    'fmt':'fmt/9.0.0@',
-    'cxxopts' : 'cxxopts/3.0.0@'   
-    
-    # ... the dependency list goes on
-}
-# Adding new dependencies to this dict is error-free, but if you 
-# change an existing entry, e.g. the pakage version, you probably need
-# `meson configure --clearcache` to let new setting takes effect.
-
-conan_program = find_program(['conan'], required: true, native: true)
-
-foreach pkg_name, conan_ref : conan_pkgs
-    module_path = meson.current_build_dir() / 'conan-cmake' / pkg_name
-    run_command(conan_program,'install',conan_ref, '-if',module_path,
-        '-g','cmake_find_package', check: true)
-    project_dependencies += dependency(pkg_name, method: 'cmake', cmake_module_path: module_path)
-endforeach
-
 
 ####################################################################################################
 # Executable
