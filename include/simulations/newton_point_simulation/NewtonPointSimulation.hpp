@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -20,44 +21,51 @@
 #include <units/isq/si/mass.h>
 #include <units/isq/si/time.h>
 #include <units/quantity_io.h>
+
+#include <gsl/gsl-lite.hpp>
+
 namespace pasimulations {
 
 namespace nps {
 using namespace units;
 using namespace units::isq;
 
-/*
-Stores data as units from template arguments.
- */
-template <UnitOf<si::dim_length> coordinate_unit, UnitOf<si::dim_mass> mass_unit, UnitOf<si::dim_time> time_unit,
-          UnitOf<si::dim_speed> speed_unit, UnitOf<si::dim_acceleration> acceleration_unit>
+template <std::floating_point Real>
 class NewtonPointSimulation {
-    // We assume (as it is default units) that underlying datatype is double!
+    // We assume that everything is in SI units in NewtonPointSimulation
+  public:
+    using Real_vec = std::vector<Real>;
+
   private:
-    std::vector<si::length<coordinate_unit>> x_coordinates_ {};
-    std::vector<si::length<coordinate_unit>> y_coordinates_ {};
-    std::vector<si::speed<speed_unit>> x_speeds_ {};
-    std::vector<si::speed<speed_unit>> y_speeds_ {};
-    std::vector<si::mass<mass_unit>> masses_ {};
-    si::time<time_unit> simulation_time_ { 0.0 };
+    Real_vec x_coordinates_ {};
+    Real_vec y_coordinates_ {};
+    Real_vec x_speeds_ {};
+    Real_vec y_speeds_ {};
+    Real_vec masses_ {};
+    Real simulation_time_ { 0.0 };
 
-    si::time<time_unit> timestep_ { 1 };
+    Real timestep_ { 1 };
 
-    static constexpr auto softeing_radius = si::length<coordinate_unit> { 0.1 };
+    static constexpr Real softeing_radius { 0.1 };
 
-    // In two pieces for optimization purposes
-    static constexpr auto G_units_ = si::length<si::metre> { 1 } * si::length<si::metre> { 1 } *
-                                     si::length<si::metre> { 1 } / si::mass<si::kilogram> { 1 } /
-                                     si::time<si::second> { 1 } / si::time<si::second> { 1 };
-    static constexpr dimensionless<one> G_dimensioless_ { 0.34 }; // Real value: 6.6743e-11
+    static constexpr Real G_ { 0.34 }; // Real value: 6.6743e-11
 
     using time_point = std::chrono::time_point<std::chrono::steady_clock>;
     time_point timing_clock_;
     std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
 
-    static constexpr auto default_draw_area_side_length_ { 10.0 };
+    static constexpr Real default_draw_area_side_length_ { 10.0 };
 
   public:
+    /*
+        This is the unsafe way to load data to simulation.
+        There should be version of these that uses mp-units as
+        typesafe interface to set data. After the data is inserted
+        inside the simulation we can assume that the values will stay
+        in SI units inside the simulation.
+
+        Example of this is draw function.
+     */
     void start_clock() { timing_clock_ = std::chrono::steady_clock::now(); }
 
     void stop_clock() {
@@ -81,57 +89,38 @@ class NewtonPointSimulation {
         return std::chrono::milliseconds(size_t(average_over_last_n_times_in_ms_));
     }
 
-    void set_x_coordinates_from_doubles(const std::vector<double>& raw_x_coordniates) {
-        x_coordinates_.clear();
-        for (const auto x_raw : raw_x_coordniates) {
-            x_coordinates_.emplace_back(si::length<coordinate_unit>(x_raw));
-        }
-    }
+    void set_x_coordinates_from_reals(const Real_vec& x_coordinates) { x_coordinates_ = x_coordinates; }
+    void set_y_coordinates_from_reals(const Real_vec& y_coordinates) { y_coordinates_ = y_coordinates; }
+    void set_x_speeds_from_reals(const Real_vec& x_speeds) { x_speeds_ = x_speeds; }
+    void set_y_speeds_from_reals(const Real_vec& y_speeds) { y_speeds_ = y_speeds; }
+    void set_masses_from_reals(const Real_vec& masses) { masses_ = masses; }
+    void set_timestep_from_real(const Real timestep) { timestep_ = timestep; }
 
-    void set_y_coordinates_from_doubles(const std::vector<double>& raw_y_coordniates) {
-        y_coordinates_.clear();
-        for (const auto y_raw : raw_y_coordniates) {
-            y_coordinates_.emplace_back(si::length<coordinate_unit>(y_raw));
-        }
-    }
-
-    void set_x_speeds_from_doubles(const std::vector<double>& raw_x_speeds) {
-        x_speeds_.clear();
-        for (const auto v_x_raw : raw_x_speeds) {
-            x_speeds_.emplace_back(si::speed<speed_unit>(v_x_raw));
-        }
-    }
-
-    void set_y_speeds_from_doubles(const std::vector<double>& raw_y_speeds) {
-        y_speeds_.clear();
-        for (const auto v_y_raw : raw_y_speeds) {
-            y_speeds_.emplace_back(si::speed<speed_unit>(v_y_raw));
-        }
-    }
-
-    void set_masses_from_doubles(const std::vector<double>& raw_mass) {
-        masses_.clear();
-        for (const auto mass_raw : raw_mass) {
-            masses_.emplace_back(si::mass<mass_unit>(mass_raw));
-        }
-    }
-
-    void set_timestep_from_double(const double timestep) { timestep_ = si::time<time_unit> { timestep }; }
-
-    void print_info_of_particle(size_t i) {
+    void print_info_of_particle(gsl::index i) {
         std::cout << "i: " << i << "\nmass: " << masses_[i] << "\n";
         std::cout << "x: " << x_coordinates_[i] << " " << x_speeds_[i] << "\n";
         std::cout << "y: " << y_coordinates_[i] << " " << y_speeds_[i] << "\n";
     }
+    /*
+    auto x_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 }
+    auto x_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 }
+    auto y_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 }
+    auto y_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 } */
 
-    void draw(si::length<coordinate_unit> x_min = si::length<coordinate_unit>(si::length<coordinate_unit> {
-                  -default_draw_area_side_length_ / 2.0 }),
-              si::length<coordinate_unit> x_max = si::length<coordinate_unit>(si::length<coordinate_unit> {
-                  default_draw_area_side_length_ / 2.0 }),
-              si::length<coordinate_unit> y_min = si::length<coordinate_unit>(si::length<coordinate_unit> {
-                  -default_draw_area_side_length_ / 2.0 }),
-              si::length<coordinate_unit> y_max = si::length<coordinate_unit>(si::length<coordinate_unit> {
-                  default_draw_area_side_length_ / 2.0 })) {
+    void draw /* using default draw window */ () {
+        auto x_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 };
+        auto x_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 };
+        auto y_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 };
+        auto y_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 };
+
+        draw(x_min, x_max, y_min, y_max);
+    };
+    void draw(Length auto x_min_with_units, Length auto x_max_with_units, Length auto y_min_with_units,
+              Length auto y_max_with_units) {
+        const auto x_min = Real { quantity_cast<si::length<si::metre>>(x_min_with_units).number() };
+        const auto x_max = Real { quantity_cast<si::length<si::metre>>(x_max_with_units).number() };
+        const auto y_min = Real { quantity_cast<si::length<si::metre>>(y_min_with_units).number() };
+        const auto y_max = Real { quantity_cast<si::length<si::metre>>(y_max_with_units).number() };
 
         const auto width = x_max - x_min;
         const auto height = y_max - y_min;
@@ -147,16 +136,15 @@ class NewtonPointSimulation {
             const auto x_screen_pos = (x_coordinates_[i] - x_min) / width;
             const auto y_screen_pos = (y_coordinates_[i] - y_min) / height;
             /* Test if we are in frame */
-            if (x_screen_pos.number() > 0 && x_screen_pos.number() < 1 && y_screen_pos.number() > 0 &&
-                y_screen_pos.number() < 1) {
-                const auto x_index = int(width_in_pixels * x_screen_pos.number());
-                const auto y_index = int(height_in_pixels * y_screen_pos.number());
+            if (x_screen_pos > 0 && x_screen_pos < 1 && y_screen_pos > 0 && y_screen_pos < 1) {
+                const auto x_index = int(width_in_pixels * x_screen_pos);
+                const auto y_index = int(height_in_pixels * y_screen_pos);
 
                 const auto ansi_color_code_beginning =
                     std::string { "\033[38;5;" } + std::to_string(i / 255) + std::string { "m" };
-                const auto ansi_color_code_ending = std::string { "\033[0m" };
+                static auto ansi_color_code_ending = ansi::str(ansi::reset);
                 // Test if there is special effects already on this pixel
-                if (masses_[i] < si::mass<mass_unit> { 2 } && frame[x_index + width_in_pixels * y_index] != "X") {
+                if (masses_[i] < Real { 2.0 } && frame[x_index + width_in_pixels * y_index] != "X") {
                     frame[x_index + width_in_pixels * y_index] =
                         ansi_color_code_beginning + "X" + ansi_color_code_ending;
                 } else {
@@ -175,10 +163,8 @@ class NewtonPointSimulation {
 
         fmt::print("{}\r", ansi::str(ansi::clrline()));
 
-        // Formatting ms is native in c++20 but gcc does not support std::format yet ;(
-        fmt::print("n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms [units might be wrong, needs "
-                   "std::format]",
-                   particles, simulation_time_.number(), calculation_time_average_().count());
+        fmt::print("n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms", particles, simulation_time_,
+                   calculation_time_average_().count());
 
         fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
     }
@@ -195,53 +181,27 @@ class NewtonPointSimulation {
 
         const auto particles = x_coordinates_.size();
 
-        auto x_accelerations =
-            std::vector<si::acceleration<acceleration_unit>>(particles, si::acceleration<acceleration_unit> { 0.0 });
-        auto y_accelerations =
-            std::vector<si::acceleration<acceleration_unit>>(particles, si::acceleration<acceleration_unit> { 0.0 });
+        auto x_accelerations = Real_vec(particles, 0.0);
+        auto y_accelerations = Real_vec(particles, 0.0);
 
-        for (size_t i { 0 }; i < particles - 1; ++i) {
-            for (size_t j { i + 1 }; j < particles; ++j) {
-                const Length auto d_x = x_coordinates_[j] - x_coordinates_[i];
-                const Length auto d_y = y_coordinates_[j] - y_coordinates_[i];
-                const auto d2 = d_x * d_x + d_y * d_y + softeing_radius * softeing_radius;
-                // G units business feels little jank
-                // Units are restricting optimizations and even trying to do them
-                // (hoping that G_units_ * gets optimized away by compiler)
-                // we just go around the things that units were supposed to do.
+        for (gsl::index i { 0 }; i < particles - 1; ++i) {
+            for (gsl::index j { i + 1 }; j < particles; ++j) {
+                const std::floating_point auto d_x = x_coordinates_[j] - x_coordinates_[i];
+                const std::floating_point auto d_y = y_coordinates_[j] - y_coordinates_[i];
+                const std::floating_point auto d2 = d_x * d_x + d_y * d_y + softeing_radius * softeing_radius;
 
-                // This is also evading the purpose of units library
-                if (true || d2.number() > 0.2) {
-
-                    const auto d_x_hat = pasimulations::tools::sign(d_x.number());
-                    const auto d_y_hat = pasimulations::tools::sign(d_y.number());
-                    x_accelerations[i] += d_x_hat * G_units_ * masses_[j] / d2;
-                    y_accelerations[i] += d_y_hat * G_units_ * masses_[i] / d2;
-                    x_accelerations[j] -= d_x_hat * G_units_ * masses_[j] / d2;
-                    y_accelerations[j] -= d_y_hat * G_units_ * masses_[i] / d2;
-                }
+                const auto d_x_hat = pasimulations::tools::sign(d_x);
+                const auto d_y_hat = pasimulations::tools::sign(d_y);
+                x_accelerations[i] += d_x_hat * G_ * masses_[j] / d2;
+                y_accelerations[i] += d_y_hat * G_ * masses_[i] / d2;
+                x_accelerations[j] -= d_x_hat * G_ * masses_[j] / d2;
+                y_accelerations[j] -= d_y_hat * G_ * masses_[i] / d2;
             }
         }
-        for (size_t i { 0 }; i < particles; ++i) {
-            x_accelerations[i] *= G_dimensioless_;
-            y_accelerations[i] *= G_dimensioless_;
-        }
 
-        // New velocity                     // Feels jank
-        auto calculate_speed_deltas = [&](decltype(x_accelerations)& acceleration) {
-            std::vector<si::speed<speed_unit>> speed_deltas(particles);
-            for (size_t i { 0 }; i < particles; ++i) {
-                speed_deltas[i] = acceleration[i] * timestep_;
-            }
-            return speed_deltas;
-        };
-
-        const auto x_speed_deltas = calculate_speed_deltas(x_accelerations);
-        const auto y_speed_deltas = calculate_speed_deltas(y_accelerations);
-
-        for (size_t i { 0 }; i < particles; ++i) {
-            x_speeds_[i] += x_speed_deltas[i];
-            y_speeds_[i] += y_speed_deltas[i];
+        for (gsl::index i { 0 }; i < particles; ++i) {
+            x_speeds_[i] += x_accelerations[i] * timestep_;
+            y_speeds_[i] += y_accelerations[i] * timestep_;
 
             // New position from new velocity
             x_coordinates_[i] += x_speeds_[i] * timestep_;
