@@ -12,8 +12,8 @@
 
 #include <pasimulations.hpp>
 #include <tools.hpp>
-
 #include <ANSI.hpp>
+
 int main(int argc, char* argv[]) {
     try {
 
@@ -60,6 +60,11 @@ int main(int argc, char* argv[]) {
                         result["number-of-particles"].as<int>(),
                         pasimulations::Newton_point_simulation_implementations::gpu_1);
                     break;
+                case pasimulations::tools::hash("gpu_2"):
+                    pasimulations::run_newton_point_simulation_test(
+                        result["number-of-particles"].as<int>(),
+                        pasimulations::Newton_point_simulation_implementations::gpu_2);
+                    break;
 
                 default:
                     fmt::print("{}{}{} is not implemented\n", error_font, result["runtype"].as<std::string>(),
@@ -68,7 +73,7 @@ int main(int argc, char* argv[]) {
                     /*
                                         THIS HAS TO BE UPDATED MANUALLY:
                      */
-                    const auto runtypes_for_nps = std::vector<std::string> { "cpu_1", "gpu_1" }; // Can be made consexpr in gcc11
+                    const auto runtypes_for_nps = std::vector<std::string> { "cpu_1", "gpu_1", "gpu_2" }; // Can be made consexpr in gcc11
                     for (const auto& runtype : runtypes_for_nps) {
                         fmt::print("\t{}\n", runtype);
                     }

@@ -7,6 +7,7 @@
 #include <ranges>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <ANSI.hpp>
 
@@ -23,6 +24,12 @@
 #include <units/quantity_io.h>
 
 #include <gsl/gsl-lite.hpp>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#define KOMPUTE_LOG_LEVEL 5
+#include "../libs/kompute/single_include/kompute/Kompute.hpp"
+#pragma GCC diagnostic pop
 
 namespace pasimulations {
 
@@ -46,7 +53,7 @@ class NewtonPointSimulation {
 
     Real timestep_ { 1 };
 
-    static constexpr Real softeing_radius { 0.1 };
+    static constexpr Real softening_radius_ { 0.1 };
 
     static constexpr Real G_ { 0.34 }; // Real value: 6.6743e-11
 
@@ -101,11 +108,6 @@ class NewtonPointSimulation {
         std::cout << "x: " << x_coordinates_[i] << " " << x_speeds_[i] << "\n";
         std::cout << "y: " << y_coordinates_[i] << " " << y_speeds_[i] << "\n";
     }
-    /*
-    auto x_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 }
-    auto x_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 }
-    auto y_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 }
-    auto y_max = si::length<si::metre> { default_draw_area_side_length_ / 2.0 } */
 
     void draw /* using default draw window */ () {
         auto x_min = si::length<si::metre> { -default_draw_area_side_length_ / 2.0 };
@@ -169,9 +171,11 @@ class NewtonPointSimulation {
         fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
     }
 
-    // The most basic implementation
+    /*
+    Properties:
+    * Most basic implementation
+     */
     void evolve_with_cpu_1() {
-        simulation_time_ += timestep_;
         /*
                 std::cout << x_coordinates_.size() << "  " << y_coordinates_.size() << "  " << x_speeds_.size() << "  "
                           << y_speeds_.size() << "  " << masses_.size() << "\n";
@@ -188,7 +192,7 @@ class NewtonPointSimulation {
             for (gsl::index j { i + 1 }; j < particles; ++j) {
                 const std::floating_point auto d_x = x_coordinates_[j] - x_coordinates_[i];
                 const std::floating_point auto d_y = y_coordinates_[j] - y_coordinates_[i];
-                const std::floating_point auto d2 = d_x * d_x + d_y * d_y + softeing_radius * softeing_radius;
+                const std::floating_point auto d2 = d_x * d_x + d_y * d_y + softening_radius_ * softening_radius_;
 
                 const auto d_x_hat = pasimulations::tools::sign(d_x);
                 const auto d_y_hat = pasimulations::tools::sign(d_y);
@@ -207,9 +211,22 @@ class NewtonPointSimulation {
             x_coordinates_[i] += x_speeds_[i] * timestep_;
             y_coordinates_[i] += y_speeds_[i] * timestep_;
         }
+
+        simulation_time_ += timestep_;
     }
 
+    /*
+    Properties:
+    * Most basic implementation
+     */
     void evolve_with_gpu_1();
+
+    /*
+    Properties:
+    * Most basic implementation
+    * Removed check if calculating self forces
+     */
+    void evolve_with_gpu_2();
 };
 
 } // namespace nps

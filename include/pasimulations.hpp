@@ -9,7 +9,7 @@
 #include <simulations/newton_point_simulation/NewtonPointSimulation.hpp>
     namespace pasimulations {
 
-    enum class Newton_point_simulation_implementations { cpu_1, gpu_1 };
+    enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2};
 
     void run_newton_point_simulation_test(const std::integral auto number_of_particles,
                                           const Newton_point_simulation_implementations implementation) {
@@ -64,6 +64,9 @@
                 break;
             case Newton_point_simulation_implementations::gpu_1:
                 simulator.evolve_with_gpu_1();
+                break;
+            case Newton_point_simulation_implementations::gpu_2:
+                simulator.evolve_with_gpu_2();
                 break;
             }
             simulator.stop_clock();

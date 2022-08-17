@@ -1,48 +1,77 @@
 #include <simulations/newton_point_simulation/NewtonPointSimulation.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#define KOMPUTE_LOG_LEVEL 5
-#include "../libs/kompute/single_include/kompute/Kompute.hpp"
-#pragma GCC diagnostic pop
-
 namespace pasimulations {
-
 namespace nps {
-
 
 template <>
 void NewtonPointSimulation<double>::evolve_with_gpu_1() {
 
-    std::vector<si::acceleration<si::metre_per_second_sq>> testing(10,
-                                                                   si::acceleration<si::metre_per_second_sq> { 0.0 });
-
-    for (gsl::index i = 0; i < testing.size(); ++i) {
-        testing[i] += si::acceleration<si::metre_per_second_sq> { i };
-    }
-    for (const auto x : testing) {
-        fmt::print("{}", x.number());
-    }
-
     kp::Manager mgr {};
 
-    auto tensor_in_a = mgr.tensorT(std::vector<float> { 1, 2, 3 });
-    auto tensor_in_b = mgr.tensorT(std::vector<float> { 1, 2, 3 });
+    auto tensor_in_x_coordinates = mgr.tensorT(x_coordinates_);
+    auto tensor_in_y_coordinates = mgr.tensorT(y_coordinates_);
+    auto tensor_in_x_speeds = mgr.tensorT(x_speeds_);
+    auto tensor_in_y_speeds = mgr.tensorT(y_speeds_);
+    auto tensor_in_masses = mgr.tensorT(masses_);
 
-    const std::vector<std::shared_ptr<kp::Tensor>> params { tensor_in_a, tensor_in_b };
+    const std::vector<std::shared_ptr<kp::Tensor>> params { tensor_in_x_coordinates, tensor_in_y_coordinates,
+                                                            tensor_in_x_speeds, tensor_in_y_speeds, tensor_in_masses };
 
-    static const auto path_to_shader = std::filesystem::path("./shaders/test.comp.spv");
+    static const auto path_to_shader = std::filesystem::path("./shaders/gpu_1_double.comp.spv");
 
+    const auto particles = static_cast<uint32_t>(x_coordinates_.size());
     std::shared_ptr<kp::Algorithm> algo =
-        mgr.algorithm(params, pasimulations::tools::readShader(path_to_shader), { 1, 1, 1 });
+        mgr.algorithm<double, double>(params, pasimulations::tools::readShader(path_to_shader),
+                                      kp::Workgroup { particles, 1, 1 }, { softening_radius_, G_ }, { timestep_ });
 
     mgr.sequence()
         ->record<kp::OpTensorSyncDevice>(params)
-        ->record<kp::OpAlgoDispatch>(algo)
+        ->record<kp::OpAlgoDispatch>(algo, std::vector<double> { timestep_ })
         ->record<kp::OpTensorSyncLocal>(params)
         ->eval();
 
-    // fmt::print("{}", fmt::join(tensor_in_a->vector(), " "));
+    simulation_time_ += timestep_;
+
+    x_coordinates_ = tensor_in_x_coordinates->vector();
+    y_coordinates_ = tensor_in_y_coordinates->vector();
+    x_speeds_ = tensor_in_x_speeds->vector();
+    y_speeds_ = tensor_in_y_speeds->vector();
+}
+
+
+template <>
+void NewtonPointSimulation<double>::evolve_with_gpu_2() {
+
+    kp::Manager mgr {};
+
+    auto tensor_in_x_coordinates = mgr.tensorT(x_coordinates_);
+    auto tensor_in_y_coordinates = mgr.tensorT(y_coordinates_);
+    auto tensor_in_x_speeds = mgr.tensorT(x_speeds_);
+    auto tensor_in_y_speeds = mgr.tensorT(y_speeds_);
+    auto tensor_in_masses = mgr.tensorT(masses_);
+
+    const std::vector<std::shared_ptr<kp::Tensor>> params { tensor_in_x_coordinates, tensor_in_y_coordinates,
+                                                            tensor_in_x_speeds, tensor_in_y_speeds, tensor_in_masses };
+
+    static const auto path_to_shader = std::filesystem::path("./shaders/gpu_2_double.comp.spv");
+
+    const auto particles = static_cast<uint32_t>(x_coordinates_.size());
+    std::shared_ptr<kp::Algorithm> algo =
+        mgr.algorithm<double, double>(params, pasimulations::tools::readShader(path_to_shader),
+                                      kp::Workgroup { particles, 1, 1 }, { softening_radius_, G_ }, { timestep_ });
+
+    mgr.sequence()
+        ->record<kp::OpTensorSyncDevice>(params)
+        ->record<kp::OpAlgoDispatch>(algo, std::vector<double> { timestep_ })
+        ->record<kp::OpTensorSyncLocal>(params)
+        ->eval();
+
+    simulation_time_ += timestep_;
+
+    x_coordinates_ = tensor_in_x_coordinates->vector();
+    y_coordinates_ = tensor_in_y_coordinates->vector();
+    x_speeds_ = tensor_in_x_speeds->vector();
+    y_speeds_ = tensor_in_y_speeds->vector();
 }
 
 } // namespace nps
