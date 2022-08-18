@@ -10,9 +10,9 @@
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
+#include <ANSI.hpp>
 #include <pasimulations.hpp>
 #include <tools.hpp>
-#include <ANSI.hpp>
 
 int main(int argc, char* argv[]) {
     try {
@@ -31,7 +31,9 @@ int main(int argc, char* argv[]) {
         .show_positional_help()
         .add_options()
         ("h,help", "Print usage")
-        ("number-of-particles", "Number of particles (points) in a simulation", cxxopts::value<int>()->default_value("1500")->implicit_value("1500"))
+        ("number_of_particles", "Number of particles (points) in a simulation", cxxopts::value<int>()->default_value("0"))
+        ("seed", "Seed used for rng", cxxopts::value<double>()->default_value("0"))
+        ("timesteps", "This many timesteps will be simulated", cxxopts::value<int>()->default_value("0"))
         ("simulation", fmt::format("Available simulations: {}", fmt::join(simulation_names_for_help, ", ")), cxxopts::value<std::string>()->default_value(""))
         ("runtype", "Start a simulation with spesific runtype. To see available runtypes (eg. cpu_1) use list", cxxopts::value<std::string>()->default_value(""))
         ;
@@ -41,51 +43,56 @@ int main(int argc, char* argv[]) {
 
         const auto result = options.parse(argc, argv);
 
-        const auto error_font = ansi::str(ansi::fg_brightred) + ansi::str(ansi::bold);
+        auto parse_optional_option = [&]<typename T>(const std::string option, const T) {
+            return result[option].count() ? std::optional<T> { result[option].as<T>() } : std::optional<T> {};
+        };
+
+        const auto number_of_particles = parse_optional_option("number_of_particles", int {});
+        const auto seed = parse_optional_option("seed", double {});
+        const auto timesteps = parse_optional_option("timesteps", int {});
+
+        auto print_not_implemented_error = [&](const std::string what_is_missing,
+                                               const std::vector<std::string> what_are_available) {
+            const auto error_font = ansi::str(ansi::fg_brightred) + ansi::str(ansi::bold);
+
+            fmt::print("{}{}{} is not implemented\n", error_font, result[what_is_missing].as<std::string>(),
+                       ansi::str(ansi::reset));
+            fmt::print("Following runtypes available:\n");
+            for (const auto& runtype : what_are_available) {
+                fmt::print("\t{}\n", runtype);
+            }
+        };
 
         if (result.count("help") || !(result["simulation"].count() && result["runtype"].count())) {
             fmt::print(options.help());
         } else {
             switch (pasimulations::tools::hash(result["simulation"].as<std::string>())) {
-            case pasimulations::tools::hash("newton_point_simulation"):
+            case pasimulations::tools::hash("newton_point_simulation"): {
+                std::optional<pasimulations::Newton_point_simulation_implementations> implementation {};
 
                 switch (pasimulations::tools::hash(result["runtype"].as<std::string>())) {
-                case pasimulations::tools::hash("cpu_1"):
-                    pasimulations::run_newton_point_simulation_test(
-                        result["number-of-particles"].as<int>(),
-                        pasimulations::Newton_point_simulation_implementations::cpu_1);
-                    break;
-                case pasimulations::tools::hash("gpu_1"):
-                    pasimulations::run_newton_point_simulation_test(
-                        result["number-of-particles"].as<int>(),
-                        pasimulations::Newton_point_simulation_implementations::gpu_1);
-                    break;
-                case pasimulations::tools::hash("gpu_2"):
-                    pasimulations::run_newton_point_simulation_test(
-                        result["number-of-particles"].as<int>(),
-                        pasimulations::Newton_point_simulation_implementations::gpu_2);
-                    break;
+                case pasimulations::tools::hash("cpu_1"): {
+                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::cpu_1);
 
-                default:
-                    fmt::print("{}{}{} is not implemented\n", error_font, result["runtype"].as<std::string>(),
-                               ansi::str(ansi::reset));
-                    fmt::print("Following runtypes available:\n");
-                    /*
-                                        THIS HAS TO BE UPDATED MANUALLY:
-                     */
-                    const auto runtypes_for_nps = std::vector<std::string> { "cpu_1", "gpu_1", "gpu_2" }; // Can be made consexpr in gcc11
-                    for (const auto& runtype : runtypes_for_nps) {
-                        fmt::print("\t{}\n", runtype);
-                    }
-                    break;
+                } break;
+                case pasimulations::tools::hash("gpu_1"): {
+                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_1);
+                } break;
+                case pasimulations::tools::hash("gpu_2"): {
+                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_2);
+                } break;
                 }
 
-                break;
-            default:
-                fmt::print("{}{}{} is not implemented\n", error_font, result["simulation"].as<std::string>(),
-                           ansi::str(ansi::reset));
-                fmt::print("Following simulations available:\n\t{}\n", fmt::join(simulation_names_for_help, "\n\t"));
-                break;
+                if (implementation.has_value()) {
+                    pasimulations::run_newton_point_simulation_test(implementation.value(), number_of_particles, seed,
+                                                                    timesteps);
+                } else {
+                    print_not_implemented_error("runtype", { "cpu_1", "gpu_1", "gpu_2" });
+                }
+            } break;
+            default: {
+                print_not_implemented_error("simulation", simulation_names_for_help);
+            } break;
             }
         }
     } catch (const std::exception& e) {
