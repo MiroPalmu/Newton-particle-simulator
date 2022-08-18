@@ -14,9 +14,17 @@
 #include <pasimulations.hpp>
 #include <tools.hpp>
 
+/* 
+    We resolve positional cl options in main.cpp and pass them froward,
+    because it is assumed that without one program can not be run.
+
+    Other options are made into optionals, because working with default 
+    and implicite values is not nice.
+ */
+
 int main(int argc, char* argv[]) {
     try {
-
+        
         auto options = cxxopts::Options("pasimulations", "Collection of simulations");
 
         // This needs to be held up to date manually
@@ -30,7 +38,7 @@ int main(int argc, char* argv[]) {
         .set_tab_expansion()
         .show_positional_help()
         .add_options()
-        ("h,help", "Print usage")
+        ("h,help", "Print usage") // Default values of are not used but needed  to not have errors when their options are not given
         ("number_of_particles", "Number of particles (points) in a simulation", cxxopts::value<int>()->default_value("0"))
         ("seed", "Seed used for rng", cxxopts::value<double>()->default_value("0"))
         ("timesteps", "This many timesteps will be simulated", cxxopts::value<int>()->default_value("0"))
