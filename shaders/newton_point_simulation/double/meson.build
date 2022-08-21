@@ -1,11 +1,8 @@
-subdir('newton_point_simulation')
-
-
 
 shader_compiler = find_program(['glslangValidator'], required: true, native: true)
 
 # Array to store all shaders to be compiled:
-shader_sources = files('test.comp', 'test2.comp')
+shader_sources = files('gpu_1.comp', 'gpu_2.comp')
 
 shader_targets = []
 foreach shader_source : shader_sources

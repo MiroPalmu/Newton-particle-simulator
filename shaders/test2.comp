@@ -1,0 +1,29 @@
+
+// The version to use 
+#version 450
+#extension GL_KHR_shader_subgroup_basic : enable
+
+
+// The execution structure
+layout (local_size_x = 1) in;
+
+//layout (constant_id = 0) const ELEMENT_T s = 1;
+
+// The buffers are provided via the tensors
+layout(binding = 0) buffer bufA { float a[3]; };
+layout(binding = 1) buffer bufB { float b[3]; };
+
+
+// layout( push_constant ) uniform constants {
+//     ELEMENT_T;
+// };
+
+void main() {
+    
+    //uint global_id = gl_GlobalInvocationID.x;
+
+    a[1] = 2.3;
+    a[0] = 2.12;
+    b[0] = 24.3;
+
+}
