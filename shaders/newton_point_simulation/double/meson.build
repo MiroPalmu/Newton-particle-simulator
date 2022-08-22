@@ -2,7 +2,13 @@
 shader_compiler = find_program(['glslangValidator'], required: true, native: true)
 
 # Array to store all shaders to be compiled:
-shader_sources = files('gpu_1.comp', 'gpu_2.comp', 'calculate_new_positions_1.comp')
+shader_sources = files(
+  'gpu_1.comp',
+  'gpu_2.comp',
+  'gpu_3.comp',
+  'calculate_new_positions_1.comp',
+  'calculate_new_positions_2.comp',
+)
 
 shader_targets = []
 foreach shader_source : shader_sources

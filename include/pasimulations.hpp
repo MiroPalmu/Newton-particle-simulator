@@ -18,7 +18,7 @@
 
 namespace pasimulations {
 
-enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2 };
+enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2, gpu_3 };
 
 template <std::integral I>
 void run_newton_point_simulation_test(const Newton_point_simulation_implementations implementation,
@@ -26,7 +26,8 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
                                       const std::optional<double> seed = std::optional<double> {},
                                       const std::optional<I> optional_simulated_timesteps = std::optional<I> {}) {
 
-    const auto number_of_particles = optional_number_of_particles.value_or(3000);
+    const auto number_of_particles = optional_number_of_particles.value_or(3000
+    );
     const auto simulated_timesteps = optional_simulated_timesteps.value_or(1000);
     std::random_device rd;                 // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(seed.value_or(rd())); // Standard mersenne_twister_engine seeded with rd()
@@ -45,9 +46,12 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
 
     std::normal_distribution<> coordinate_radius_dist(3, 2);
     std::uniform_real_distribution<> coordinate_angle_dist(0.0, 2.0 * std::numbers::pi);
+    std::uniform_real_distribution<> mass_dist(1.0, 1.3);
+
+
     std::normal_distribution<> velocity_magnitude_dist(10.0, 0.1);
     std::normal_distribution<> velocity_angle_dist(0.0, 0.0001);
-    std::uniform_real_distribution<> mass_dist(1.0, 1.3);
+    
 
     for ([[maybe_unused]] auto dump : std::ranges::iota_view(0, number_of_particles)) {
         const auto coordinate_radius = coordinate_radius_dist(gen);
@@ -69,7 +73,7 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     simulator.set_y_speeds_from_reals(testing_y_speeds);
     simulator.set_masses_from_reals(testing_masses);
     simulator.set_timestep_from_real(0.001);
-
+    
     for ([[maybe_unused]] const auto _ : std::ranges::iota_view(0, simulated_timesteps)) {
         simulator.start_clock();
         switch (implementation) {
@@ -81,6 +85,9 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
             break;
         case Newton_point_simulation_implementations::gpu_2:
             simulator.evolve_with_gpu_2();
+            break;
+        case Newton_point_simulation_implementations::gpu_3:
+            simulator.evolve_with_gpu_3();
             break;
         }
         simulator.stop_clock();

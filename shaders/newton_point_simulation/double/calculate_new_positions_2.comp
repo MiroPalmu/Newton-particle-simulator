@@ -1,0 +1,30 @@
+
+// The version to use 
+#version 450
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_ARB_gpu_shader_fp64 : enable
+
+
+// The execution structure
+layout (local_size_x = 64) in;
+
+// The buffers are provided via the tensors
+layout(binding = 0) buffer bufA { double x_coordinates[]; };
+layout(binding = 1) buffer bufB { double y_coordinates[]; };
+layout(binding = 2) buffer bufC { double x_speeds[]; };
+layout(binding = 3) buffer bufD { double y_speeds[]; };
+
+
+layout( push_constant ) uniform constants {
+    double timestep;
+};
+
+void main() {
+
+    const uint i = gl_GlobalInvocationID.x;
+
+    // New position from new velocity
+    x_coordinates[i] += x_speeds[i] * timestep;
+    y_coordinates[i] += y_speeds[i] * timestep;
+        
+} 

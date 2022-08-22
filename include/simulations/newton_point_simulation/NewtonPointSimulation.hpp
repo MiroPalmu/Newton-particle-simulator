@@ -216,9 +216,16 @@ class NewtonPointSimulation {
     /*
     Properties:
     * Most basic implementation
-    * Removed check if calculating self forces
+    * Set size of workgroups to 64 and added padding
      */
     void evolve_with_gpu_2();
+    
+    /*
+    Properties:
+    * Most basic implementation
+    * Set size of workgroups to 64 and added padding
+     */
+    void evolve_with_gpu_3();
 };
 
 } // namespace nps

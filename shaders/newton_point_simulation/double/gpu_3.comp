@@ -33,20 +33,23 @@ void main() {
     double x_acceleration = 0.0LF;
     double y_acceleration = 0.0LF;
 
+    const double own_x_coordinates = x_coordinates[i];
+    const double own_y_coordinates = y_coordinates[i];
+
     for (uint j = 0; j < particles; ++j) {
-        const double d_x = x_coordinates[j] - x_coordinates[i];
-        const double d_y = y_coordinates[j] - y_coordinates[i];
+        const double d_x = x_coordinates[j] - own_x_coordinates;
+        const double d_y = y_coordinates[j] - own_y_coordinates;
         // We calculate this way because sign function is problematic
         // Results might differ between cpu and gpu
-        const double d = sqrt(d_x * d_x + d_y * d_y + softening_radius * softening_radius);
+        const double d_inverted = inversesqrt(d_x * d_x + d_y * d_y + softening_radius * softening_radius);
 
         // There is no double pow function 
-        x_acceleration += d_x * G * masses[j] / (d * d * d);
-        y_acceleration += d_y * G * masses[j] / (d * d * d);
+        x_acceleration = fma(d_x * G * masses[j], d_inverted * d_inverted * d_inverted, x_acceleration);
+        y_acceleration = fma(d_y * G * masses[j], d_inverted * d_inverted * d_inverted, y_acceleration);
     }
 
 
-    x_speeds[i] += x_acceleration * timestep;
-    y_speeds[i] += y_acceleration * timestep;
+    x_speeds[i] = fma(x_acceleration, timestep, x_speeds[i]);
+    y_speeds[i] = fma(y_acceleration, timestep, y_speeds[i]);
         
 } 

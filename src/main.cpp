@@ -89,13 +89,16 @@ int main(int argc, char* argv[]) {
                 case pasimulations::tools::hash("gpu_2"): {
                     implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_2);
                 } break;
+                case pasimulations::tools::hash("gpu_3"): {
+                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_3);
+                } break;
                 }
 
                 if (implementation.has_value()) {
                     pasimulations::run_newton_point_simulation_test(implementation.value(), number_of_particles, seed,
                                                                     timesteps);
                 } else {
-                    print_not_implemented_error("runtype", { "cpu_1", "gpu_1", "gpu_2" });
+                    print_not_implemented_error("runtype", { "cpu_1", "gpu_1", "gpu_2", "gpu_3" });
                 }
             } break;
             default: {
