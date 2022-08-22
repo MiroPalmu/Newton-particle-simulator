@@ -26,7 +26,7 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
                                       const std::optional<double> seed = std::optional<double> {},
                                       const std::optional<I> optional_simulated_timesteps = std::optional<I> {}) {
 
-    const auto number_of_particles = optional_number_of_particles.value_or(1500);
+    const auto number_of_particles = optional_number_of_particles.value_or(3000);
     const auto simulated_timesteps = optional_simulated_timesteps.value_or(1000);
     std::random_device rd;                 // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(seed.value_or(rd())); // Standard mersenne_twister_engine seeded with rd()
