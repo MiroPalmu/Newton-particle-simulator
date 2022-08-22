@@ -18,10 +18,10 @@ layout(binding = 2) buffer bufC { double x_speeds[]; };
 layout(binding = 3) buffer bufD { double y_speeds[]; };
 layout(binding = 4) buffer bufE { double masses[]; };
 
-
 layout( push_constant ) uniform constants {
     double timestep;
 };
+
 
 void main() {
 
@@ -30,28 +30,22 @@ void main() {
 
     double x_acceleration = 0.0LF;
     double y_acceleration = 0.0LF;
+
     for (uint j = 0; j < particles; ++j) {
             
-        if (i == j){
-            continue;
-        }
-
         const double d_x = x_coordinates[j] - x_coordinates[i];
         const double d_y = y_coordinates[j] - y_coordinates[i];
-        
-        const double d2 = d_x * d_x + d_y * d_y + softening_radius * softening_radius;
+        // We calculate this way because sign function is problematic
+        // Results might differ between cpu and gpu
+        const double d = sqrt(d_x * d_x + d_y * d_y + softening_radius * softening_radius);
 
-
-        x_acceleration += sign(d_x) * G * masses[j] / d2;
-        y_acceleration += sign(d_y) * G * masses[j] / d2;
-
+        // There is no double pow function 
+        x_acceleration += d_x * G * masses[j] / (d * d * d);
+        y_acceleration += d_y * G * masses[j] / (d * d * d);
     }
 
 
     x_speeds[i] += x_acceleration * timestep;
     y_speeds[i] += y_acceleration * timestep;
-    // New position from new velocity
-    x_coordinates[i] += x_speeds[i] * timestep;
-    y_coordinates[i] += y_speeds[i] * timestep;
         
 } 

@@ -4,10 +4,10 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <ranges>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include <ANSI.hpp>
 
@@ -146,10 +146,7 @@ class NewtonPointSimulation {
                     std::string { "\033[38;5;" } + std::to_string(i / 255) + std::string { "m" };
                 static auto ansi_color_code_ending = ansi::str(ansi::reset);
                 // Test if there is special effects already on this pixel
-                if (masses_[i] < Real { 2.0 } && frame[x_index + width_in_pixels * y_index] != "X") {
-                    frame[x_index + width_in_pixels * y_index] =
-                        ansi_color_code_beginning + "X" + ansi_color_code_ending;
-                } else {
+                if (frame[x_index + width_in_pixels * y_index] != "O") {
                     frame[x_index + width_in_pixels * y_index] =
                         ansi_color_code_beginning + "O" + ansi_color_code_ending;
                 }
@@ -172,46 +169,41 @@ class NewtonPointSimulation {
     }
 
     /*
-    Properties:
-    * Most basic implementation
+        Properties:
+        * Most basic implementation
      */
     void evolve_with_cpu_1() {
-        /*
-                std::cout << x_coordinates_.size() << "  " << y_coordinates_.size() << "  " << x_speeds_.size() << "  "
-                          << y_speeds_.size() << "  " << masses_.size() << "\n";
-         */
+
         assert(x_coordinates_.size() == y_coordinates_.size() && x_coordinates_.size() == x_speeds_.size() &&
                x_coordinates_.size() == y_speeds_.size() && x_coordinates_.size() == masses_.size());
 
-        const auto particles = x_coordinates_.size();
+        const auto particles = static_cast<int64_t>(x_coordinates_.size());
 
         auto x_accelerations = Real_vec(particles, 0.0);
         auto y_accelerations = Real_vec(particles, 0.0);
 
-        for (gsl::index i { 0 }; i < particles - 1; ++i) {
-            for (gsl::index j { i + 1 }; j < particles; ++j) {
-                const std::floating_point auto d_x = x_coordinates_[j] - x_coordinates_[i];
-                const std::floating_point auto d_y = y_coordinates_[j] - y_coordinates_[i];
-                const std::floating_point auto d2 = d_x * d_x + d_y * d_y + softening_radius_ * softening_radius_;
+        for (const auto i : std::ranges::iota_view(0, particles)) {
+            for (const auto j : std::ranges::iota_view(0, particles)) {
 
-                const auto d_x_hat = pasimulations::tools::sign(d_x);
-                const auto d_y_hat = pasimulations::tools::sign(d_y);
-                x_accelerations[i] += d_x_hat * G_ * masses_[j] / d2;
-                y_accelerations[i] += d_y_hat * G_ * masses_[i] / d2;
-                x_accelerations[j] -= d_x_hat * G_ * masses_[j] / d2;
-                y_accelerations[j] -= d_y_hat * G_ * masses_[i] / d2;
+                const auto d_x = x_coordinates_[j] - x_coordinates_[i];
+                const auto d_y = y_coordinates_[j] - y_coordinates_[i];
+                /*
+                    We calculate this way because sign function is problematic
+                    Results might differ between cpu and gpu runs
+                 */
+                const auto d = std::sqrt(d_x * d_x + d_y * d_y + softening_radius_ * softening_radius_);
+
+                x_accelerations[i] += d_x * G_ * masses_[j] / (d * d * d);
+                y_accelerations[i] += d_y * G_ * masses_[j] / (d * d * d);
             }
-        }
-
-        for (gsl::index i { 0 }; i < particles; ++i) {
-            x_speeds_[i] += x_accelerations[i] * timestep_;
             y_speeds_[i] += y_accelerations[i] * timestep_;
-
-            // New position from new velocity
+            x_speeds_[i] += x_accelerations[i] * timestep_;
+        }
+        // New position from new velocity
+        for (const auto i : std::ranges::iota_view(0, particles)) {
             x_coordinates_[i] += x_speeds_[i] * timestep_;
             y_coordinates_[i] += y_speeds_[i] * timestep_;
         }
-
         simulation_time_ += timestep_;
     }
 

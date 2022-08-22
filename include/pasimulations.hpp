@@ -46,8 +46,8 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     std::normal_distribution<> coordinate_radius_dist(3, 2);
     std::uniform_real_distribution<> coordinate_angle_dist(0.0, 2.0 * std::numbers::pi);
     std::normal_distribution<> velocity_magnitude_dist(10.0, 0.1);
-    std::normal_distribution<> velocity_angle_dist(0, 0.0001);
-    std::uniform_real_distribution<> mass_dist(1.0, 1.0);
+    std::normal_distribution<> velocity_angle_dist(0.0, 0.0001);
+    std::uniform_real_distribution<> mass_dist(1.0, 1.3);
 
     for ([[maybe_unused]] auto dump : std::ranges::iota_view(0, number_of_particles)) {
         const auto coordinate_radius = coordinate_radius_dist(gen);
@@ -71,9 +71,6 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     simulator.set_timestep_from_real(0.001);
 
     for ([[maybe_unused]] const auto _ : std::ranges::iota_view(0, simulated_timesteps)) {
-        if (number_of_particles < 1500) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
         simulator.start_clock();
         switch (implementation) {
         case Newton_point_simulation_implementations::cpu_1:
