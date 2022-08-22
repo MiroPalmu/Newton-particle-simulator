@@ -26,8 +26,7 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
                                       const std::optional<double> seed = std::optional<double> {},
                                       const std::optional<I> optional_simulated_timesteps = std::optional<I> {}) {
 
-    const auto number_of_particles = optional_number_of_particles.value_or(3000
-    );
+    const auto number_of_particles = optional_number_of_particles.value_or(10000);
     const auto simulated_timesteps = optional_simulated_timesteps.value_or(1000);
     std::random_device rd;                 // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(seed.value_or(rd())); // Standard mersenne_twister_engine seeded with rd()
@@ -35,7 +34,7 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     using namespace units;
     using namespace units::isq;
 
-    auto simulator = nps::NewtonPointSimulation<double> {};
+    auto simulator = nps::NewtonPointSimulation<float> {};
 
     using Real_vec = decltype(simulator)::Real_vec;
     auto testing_x_coords = Real_vec {};
@@ -48,10 +47,8 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     std::uniform_real_distribution<> coordinate_angle_dist(0.0, 2.0 * std::numbers::pi);
     std::uniform_real_distribution<> mass_dist(1.0, 1.3);
 
-
     std::normal_distribution<> velocity_magnitude_dist(10.0, 0.1);
     std::normal_distribution<> velocity_angle_dist(0.0, 0.0001);
-    
 
     for ([[maybe_unused]] auto dump : std::ranges::iota_view(0, number_of_particles)) {
         const auto coordinate_radius = coordinate_radius_dist(gen);
@@ -73,7 +70,9 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     simulator.set_y_speeds_from_reals(testing_y_speeds);
     simulator.set_masses_from_reals(testing_masses);
     simulator.set_timestep_from_real(0.001);
-    
+
+    simulator.set_G_from_real(static_cast<float>(number_of_particles) / 3000.0 * 0.34);
+
     for ([[maybe_unused]] const auto _ : std::ranges::iota_view(0, simulated_timesteps)) {
         simulator.start_clock();
         switch (implementation) {
@@ -91,7 +90,8 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
             break;
         }
         simulator.stop_clock();
-        simulator.draw();
+        simulator.draw(si::length<si::metre> { -50 }, si::length<si::metre> { 50 }, si::length<si::metre> { -50 },
+                       si::length<si::metre> { 50 });
     }
 }
 } // namespace pasimulations

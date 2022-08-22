@@ -53,9 +53,9 @@ class NewtonPointSimulation {
 
     Real timestep_ { 1 };
 
-    static constexpr Real softening_radius_ { 0.1 };
+    Real softening_radius_ { 0.1 };
 
-    static constexpr Real G_ { 0.34 }; // Real value: 6.6743e-11
+    Real G_ { 0.34 }; // Real value: 6.6743e-11
 
     using time_point = std::chrono::time_point<std::chrono::steady_clock>;
     time_point timing_clock_;
@@ -102,6 +102,7 @@ class NewtonPointSimulation {
     void set_y_speeds_from_reals(const Real_vec& y_speeds) { y_speeds_ = y_speeds; }
     void set_masses_from_reals(const Real_vec& masses) { masses_ = masses; }
     void set_timestep_from_real(const Real timestep) { timestep_ = timestep; }
+    void set_G_from_real(const Real G) { G_ = G; }
 
     void print_info_of_particle(gsl::index i) {
         std::cout << "i: " << i << "\nmass: " << masses_[i] << "\n";
@@ -119,10 +120,10 @@ class NewtonPointSimulation {
     };
     void draw(Length auto x_min_with_units, Length auto x_max_with_units, Length auto y_min_with_units,
               Length auto y_max_with_units) {
-        const auto x_min = Real { quantity_cast<si::length<si::metre>>(x_min_with_units).number() };
-        const auto x_max = Real { quantity_cast<si::length<si::metre>>(x_max_with_units).number() };
-        const auto y_min = Real { quantity_cast<si::length<si::metre>>(y_min_with_units).number() };
-        const auto y_max = Real { quantity_cast<si::length<si::metre>>(y_max_with_units).number() };
+        const auto x_min = static_cast<Real>(quantity_cast<si::length<si::metre>>(x_min_with_units).number());
+        const auto x_max = static_cast<Real>(quantity_cast<si::length<si::metre>>(x_max_with_units).number());
+        const auto y_min = static_cast<Real>(quantity_cast<si::length<si::metre>>(y_min_with_units).number());
+        const auto y_max = static_cast<Real>(quantity_cast<si::length<si::metre>>(y_max_with_units).number());
 
         const auto width = x_max - x_min;
         const auto height = y_max - y_min;
@@ -219,7 +220,7 @@ class NewtonPointSimulation {
     * Set size of workgroups to 64 and added padding
      */
     void evolve_with_gpu_2();
-    
+
     /*
     Properties:
     * Most basic implementation

@@ -6,17 +6,17 @@
 
 
 // The execution structure
-layout (local_size_x = 1) in;
+layout (local_size_x = 64) in;
 
 // The buffers are provided via the tensors
-layout(binding = 0) buffer bufA { double x_coordinates[]; };
-layout(binding = 1) buffer bufB { double y_coordinates[]; };
-layout(binding = 2) buffer bufC { double x_speeds[]; };
-layout(binding = 3) buffer bufD { double y_speeds[]; };
+layout(binding = 0) buffer bufA { float x_coordinates[]; };
+layout(binding = 1) buffer bufB { float y_coordinates[]; };
+layout(binding = 2) buffer bufC { float x_speeds[]; };
+layout(binding = 3) buffer bufD { float y_speeds[]; };
 
 
 layout( push_constant ) uniform constants {
-    double timestep;
+    float timestep;
 };
 
 void main() {
