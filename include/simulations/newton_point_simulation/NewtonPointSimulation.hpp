@@ -31,6 +31,8 @@
 #include "../libs/kompute/single_include/kompute/Kompute.hpp"
 #pragma GCC diagnostic pop
 
+#include <vulkan/vulkan_raii.hpp>
+
 namespace pasimulations {
 
 namespace nps {

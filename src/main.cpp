@@ -98,6 +98,9 @@ int main(int argc, char* argv[]) {
                 case pasimulations::tools::hash("gpu_3"): {
                     implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_3);
                 } break;
+                case pasimulations::tools::hash("gpu_4"): {
+                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_4);
+                } break;
                 }
 
                 if (implementation.has_value()) {
