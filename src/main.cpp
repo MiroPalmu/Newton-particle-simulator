@@ -20,6 +20,8 @@
 
     Other options are made into optionals, because working with default 
     and implicite values is not nice.
+
+    Except for boolean options
  */
 
 int main(int argc, char* argv[]) {
@@ -42,6 +44,7 @@ int main(int argc, char* argv[]) {
         ("number_of_particles", "Number of particles (points) in a simulation", cxxopts::value<int>()->default_value("0"))
         ("seed", "Seed used for rng", cxxopts::value<double>()->default_value("0"))
         ("timesteps", "This many timesteps will be simulated", cxxopts::value<int>()->default_value("0"))
+        ("disable_draw", "Disables terminal drawing", cxxopts::value<bool>()->default_value("0"))
         ("simulation", fmt::format("Available simulations: {}", fmt::join(simulation_names_for_help, ", ")), cxxopts::value<std::string>()->default_value(""))
         ("runtype", "Start a simulation with spesific runtype. To see available runtypes (eg. cpu_1) use list", cxxopts::value<std::string>()->default_value(""))
         ;
@@ -58,6 +61,9 @@ int main(int argc, char* argv[]) {
         const auto number_of_particles = parse_optional_option("number_of_particles", int {});
         const auto seed = parse_optional_option("seed", double {});
         const auto timesteps = parse_optional_option("timesteps", int {});
+        
+        /* Boolean options: */
+        const auto disable_draw = result["disable_draw"].as<bool>();
 
         auto print_not_implemented_error = [&](const std::string what_is_missing,
                                                const std::vector<std::string> what_are_available) {
@@ -96,7 +102,7 @@ int main(int argc, char* argv[]) {
 
                 if (implementation.has_value()) {
                     pasimulations::run_newton_point_simulation_test(implementation.value(), number_of_particles, seed,
-                                                                    timesteps);
+                                                                    timesteps, disable_draw);
                 } else {
                     print_not_implemented_error("runtype", { "cpu_1", "gpu_1", "gpu_2", "gpu_3" });
                 }

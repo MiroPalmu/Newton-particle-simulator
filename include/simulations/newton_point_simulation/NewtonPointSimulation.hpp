@@ -104,6 +104,15 @@ class NewtonPointSimulation {
     void set_timestep_from_real(const Real timestep) { timestep_ = timestep; }
     void set_G_from_real(const Real G) { G_ = G; }
 
+    void print_one_line_info() {
+        const auto particles = x_coordinates_.size();
+        fmt::print("n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms", particles, simulation_time_,
+                   calculation_time_average_().count());
+
+        fmt::print("{}", ansi::str(ansi::cursorhoriz(0)));
+    }
+    
+
     void print_info_of_particle(gsl::index i) {
         std::cout << "i: " << i << "\nmass: " << masses_[i] << "\n";
         std::cout << "x: " << x_coordinates_[i] << " " << x_speeds_[i] << "\n";
@@ -163,10 +172,9 @@ class NewtonPointSimulation {
 
         fmt::print("{}\r", ansi::str(ansi::clrline()));
 
-        fmt::print("n: {}, Simulation time: {:>5.2f}s, Wall clock of timestep: {:>4}ms", particles, simulation_time_,
-                   calculation_time_average_().count());
+        print_one_line_info();
 
-        fmt::print("{}{}", ansi::str(ansi::cursorhoriz(0)), ansi::str(ansi::cursorup(height_in_pixels)));
+        fmt::print("{}", ansi::str(ansi::cursorup(height_in_pixels)));
     }
 
     /*
@@ -225,8 +233,11 @@ class NewtonPointSimulation {
     Properties:
     * Most basic implementation
     * Set size of workgroups to 64 and added padding
+    * Set workgropu size to 64 (and used some build-in functions)
      */
     void evolve_with_gpu_3();
+
+    void evolve_with_gpu_4();
 };
 
 } // namespace nps

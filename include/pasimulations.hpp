@@ -18,13 +18,14 @@
 
 namespace pasimulations {
 
-enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2, gpu_3 };
+enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2, gpu_3, gpu_4 };
 
 template <std::integral I>
 void run_newton_point_simulation_test(const Newton_point_simulation_implementations implementation,
                                       const std::optional<I> optional_number_of_particles = std::optional<I> {},
                                       const std::optional<double> seed = std::optional<double> {},
-                                      const std::optional<I> optional_simulated_timesteps = std::optional<I> {}) {
+                                      const std::optional<I> optional_simulated_timesteps = std::optional<I> {},
+                                      const bool disable_draw = false) {
 
     const auto number_of_particles = optional_number_of_particles.value_or(10000);
     const auto simulated_timesteps = optional_simulated_timesteps.value_or(1000);
@@ -71,8 +72,6 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     simulator.set_masses_from_reals(testing_masses);
     simulator.set_timestep_from_real(0.001);
 
-    simulator.set_G_from_real(static_cast<float>(number_of_particles) / 3000.0 * 0.34);
-
     for ([[maybe_unused]] const auto _ : std::ranges::iota_view(0, simulated_timesteps)) {
         simulator.start_clock();
         switch (implementation) {
@@ -88,10 +87,16 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
         case Newton_point_simulation_implementations::gpu_3:
             simulator.evolve_with_gpu_3();
             break;
+        case Newton_point_simulation_implementations::gpu_4:
+            simulator.evolve_with_gpu_4();
+            break;
         }
         simulator.stop_clock();
-        simulator.draw(si::length<si::metre> { -50 }, si::length<si::metre> { 50 }, si::length<si::metre> { -50 },
-                       si::length<si::metre> { 50 });
+        if (!disable_draw) {
+            simulator.draw();
+        } else {
+            simulator.print_one_line_info();
+        }
     }
 }
 } // namespace pasimulations
