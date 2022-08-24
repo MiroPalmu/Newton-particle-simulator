@@ -1,0 +1,40 @@
+
+// The version to use 
+#version 450
+#extension GL_KHR_shader_subgroup_basic : enable
+
+/* I hope someday we could use gl_SubgroupSize as local_size */
+#define SUBGROUP_SIZE 32
+// The execution structure
+layout (local_size_x = SUBGROUP_SIZE) in;
+
+/* Shader does not work if not specialized */
+layout (constant_id = 0) const uint number_of_partial_forces = 0;
+
+// The buffers are provided via the tensors
+layout(binding = 0) buffer bufA { float x_speeds[]; };
+layout(binding = 1) buffer bufB { float y_speeds[]; };
+layout(binding = 2) buffer bufC { float partial_x_forces[]; };
+layout(binding = 3) buffer bufD { float partial_y_forces[]; };
+
+
+layout( push_constant ) uniform constants {
+    float timestep;
+
+};
+
+void main() {
+
+    const uint my_index = gl_GlobalInvocationID.x;
+
+    float x_acceleration = 0.0;
+    float y_acceleration = 0.0;
+
+    for (uint i = 0; i < number_of_partial_forces; ++i) {
+        x_acceleration += partial_x_forces[number_of_partial_forces * my_index + i];
+        y_acceleration += partial_y_forces[number_of_partial_forces * my_index + i];
+    }
+    
+    x_speeds[my_index] += x_acceleration * timestep;
+    y_speeds[my_index] += y_acceleration * timestep;
+} 

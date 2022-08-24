@@ -205,17 +205,15 @@ template <>
 void NewtonPointSimulation<float>::evolve_with_gpu_4() {
 
     const auto desired_extensions =
-        std::vector<std::string> { "GL_KHR_shader_subgroup_basic", "GL_ARB_gpu_shader_fp64" };
+        std::vector<std::string> { "GL_KHR_shader_subgroup_basic", "GL_ARB_gpu_shader_fp64", "GL_KHR_shader_subgroup_shuffle" };
     kp::Manager mgr(0, {}, desired_extensions);
 
-
-    fmt::print("{}", pasimulations::tools::subgroup_size(mgr));
+    const auto subgroup_size = pasimulations::tools::subgroup_size(mgr);
 
     const auto particles = static_cast<uint32_t>(x_coordinates_.size());
-    /* This needs to be kept up to date with gpu_2.comp */
-    constexpr auto size_of_workgroup = uint32_t { 64 };
-    const auto workgroups = particles / size_of_workgroup + 1;
-    const auto size_of_padding = particles % size_of_workgroup;
+
+    const auto workgroups_in_x_and_y = particles / subgroup_size + 1;
+    const auto size_of_padding = particles % workgroups_in_x_and_y;
 
     auto x_coordinates_with_padding = std::move(x_coordinates_);
     auto y_coordinates_with_padding = std::move(y_coordinates_);
@@ -236,32 +234,66 @@ void NewtonPointSimulation<float>::evolve_with_gpu_4() {
     auto tensor_in_y_speeds = mgr.tensor(y_speeds_with_padding);
     auto tensor_in_masses = mgr.tensor(masses_with_padding);
 
-    const auto parameters_for_speed_shader =
-        std::vector<std::shared_ptr<kp::Tensor>> { tensor_in_x_coordinates, tensor_in_y_coordinates, tensor_in_x_speeds,
-                                                   tensor_in_y_speeds, tensor_in_masses };
+    auto tensor_device_partial_x_forces = mgr.tensor(std::vector<float>(particles * workgroups_in_x_and_y));
+    auto tensor_device_partial_y_forces = mgr.tensor(std::vector<float>(particles * workgroups_in_x_and_y));
 
-    const auto path_to_speed_shader = std::filesystem::path("./shaders/newton_point_simulation/float/gpu_3.comp.spv");
+    /* Calculating forces: */
+
+    const auto parameters_for_force_shader =
+        std::vector<std::shared_ptr<kp::Tensor>> { tensor_in_x_coordinates, tensor_in_y_coordinates, tensor_in_masses,
+                                                   tensor_device_partial_x_forces, tensor_device_partial_y_forces };
+
+    const auto path_to_force_shader =
+        std::filesystem::path(fmt::format("./shaders/newton_point_simulation/float/gpu_4_{}.comp.spv", subgroup_size));
+
+    auto calculate_forces = mgr.algorithm<uint32_t, float>(
+        parameters_for_force_shader, pasimulations::tools::readShader(path_to_force_shader),
+        kp::Workgroup { workgroups_in_x_and_y, workgroups_in_x_and_y, 1 }, { particles }, { softening_radius_, G_ });
+
+    /* Calculating speeds: */
+    const auto parameters_for_speed_shader =
+        std::vector<std::shared_ptr<kp::Tensor>> { tensor_in_x_speeds, tensor_in_y_speeds,
+                                                   tensor_device_partial_x_forces, tensor_device_partial_y_forces };
+
+    const auto path_to_speed_shader = std::filesystem::path(
+        fmt::format("./shaders/newton_point_simulation/float/calculate_new_speeds_4_{}.comp.spv", subgroup_size));
 
     auto calculate_speeds = mgr.algorithm<uint32_t, float>(
         parameters_for_speed_shader, pasimulations::tools::readShader(path_to_speed_shader),
-        kp::Workgroup { workgroups, 1, 1 }, { particles }, { softening_radius_, G_, timestep_ });
+        kp::Workgroup { workgroups_in_x_and_y, 1, 1 }, { workgroups_in_x_and_y }, { timestep_ });
 
+    /* Calculating new positions: */
     const auto parameters_for_position_shader =
         std::vector<std::shared_ptr<kp::Tensor>> { tensor_in_x_coordinates, tensor_in_y_coordinates, tensor_in_x_speeds,
                                                    tensor_in_y_speeds };
 
-    const auto path_to_position_shader =
-        std::filesystem::path("./shaders/newton_point_simulation/float/calculate_new_positions_2.comp.spv");
+    const auto path_to_position_shader = std::filesystem::path(
+        fmt::format("./shaders/newton_point_simulation/float/calculate_new_positions_4_{}.comp.spv", subgroup_size));
 
     auto calculate_new_positions = mgr.algorithm<uint32_t, float>(
         parameters_for_position_shader, pasimulations::tools::readShader(path_to_position_shader),
-        kp::Workgroup { workgroups, 1, 1 }, {}, { timestep_ });
+        kp::Workgroup { workgroups_in_x_and_y, 1 }, {}, { timestep_ });
 
+    /* Sequence */
+
+    const auto sync_in_beginning = std::vector<std::shared_ptr<kp::Tensor>> { tensor_in_x_coordinates,
+                                                                              tensor_in_y_coordinates,
+                                                                              tensor_in_x_speeds,
+                                                                              tensor_in_y_speeds,
+                                                                              tensor_in_masses/* ,
+                                                                              tensor_device_partial_x_forces,
+                                                                              tensor_device_partial_y_forces */ };
+
+    const auto sync_in_the_end = std::vector<std::shared_ptr<kp::Tensor>> {
+        tensor_in_x_coordinates, tensor_in_y_coordinates,        tensor_in_x_speeds,
+        tensor_in_y_speeds/* ,      tensor_device_partial_x_forces, tensor_device_partial_y_forces */
+    };
     mgr.sequence()
-        ->record<kp::OpTensorSyncDevice>(parameters_for_speed_shader)
-        ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { softening_radius_, G_, timestep_ })
+        ->record<kp::OpTensorSyncDevice>(sync_in_beginning)
+        ->record<kp::OpAlgoDispatch>(calculate_forces, std::vector<float> { softening_radius_, G_ })
+        ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { timestep_ })
         ->record<kp::OpAlgoDispatch>(calculate_new_positions, std::vector<float> { timestep_ })
-        ->record<kp::OpTensorSyncLocal>(parameters_for_position_shader)
+        ->record<kp::OpTensorSyncLocal>(sync_in_the_end)
         ->eval();
 
     simulation_time_ += timestep_;
@@ -275,6 +307,10 @@ void NewtonPointSimulation<float>::evolve_with_gpu_4() {
     y_coordinates_.resize(particles);
     x_speeds_.resize(particles);
     y_speeds_.resize(particles);
+
+    //fmt::print("{}\n", tensor_device_partial_x_forces->vector()[0]);
+    //fmt::print("{}\n\n", fmt::join(tensor_device_partial_x_forces->vector(), " "));
+    //print_info_of_particle(10);
 }
 
 } // namespace nps

@@ -1,0 +1,72 @@
+
+// The version to use 
+#version 450
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_shuffle : enable
+
+/* I hope someday we could use gl_SubgroupSize as local_size */
+#define SUBGROUP_SIZE 32
+// The execution structure
+layout (local_size_x = SUBGROUP_SIZE) in;
+
+/* Shader does not work if not specialized */
+layout (constant_id = 0) const uint particles = 0;
+
+// The buffers are provided via the tensors
+layout(binding = 0) buffer bufA { float x_coordinates[]; };
+layout(binding = 1) buffer bufB { float y_coordinates[]; };
+layout(binding = 2) buffer bufC { float masses[]; };
+layout(binding = 3) buffer bufD { float partial_x_forces[]; };
+layout(binding = 4) buffer bufE { float partial_y_forces[]; };
+
+layout( push_constant ) uniform constants {
+    float softening_radius;
+    float G;
+
+};
+
+shared float workgroup_x_coordinates[gl_WorkGroupSize.x];
+shared float workgroup_y_coordinates[gl_WorkGroupSize.x];
+shared float workgroup_masses[gl_WorkGroupSize.x];
+
+void main() {
+    const uint subgroup_size /* = workgroup_size */ = SUBGROUP_SIZE;
+    const uint subgroup_id = gl_SubgroupID;
+
+    const uint index_of_first_element_of_workgroup = gl_WorkGroupID.y * gl_WorkGroupSize.x;
+
+    const uint a_index = gl_WorkGroupID.x * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+    const uint b_index = gl_WorkGroupID.y * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+
+    /* Each shader sets their coordinate */
+    float workgroup_x_coordinate = x_coordinates[b_index];
+    float workgroup_y_coordinate = y_coordinates[b_index];
+    float workgroup_masse = masses[b_index];
+
+
+    float x_acceleration_delta = 0.0;
+    float y_acceleration_delta = 0.0;
+    const float own_x_coordinate = x_coordinates[a_index];
+    const float own_y_coordinate = y_coordinates[a_index];
+    
+    
+    for (uint i = 0; i < subgroup_size; ++i) {
+        const float d_x = workgroup_x_coordinate - own_x_coordinate;
+        const float d_y = workgroup_y_coordinate - own_y_coordinate;
+
+        // We calculate this way because sign function is problematic
+        // Results might differ between cpu and gpu
+        const float d_inverted = inversesqrt(d_x * d_x + d_y * d_y + softening_radius * softening_radius);
+
+        x_acceleration_delta = fma(d_x * G * workgroup_masse, d_inverted * d_inverted * d_inverted, x_acceleration_delta);
+        y_acceleration_delta = fma(d_y * G * workgroup_masse, d_inverted * d_inverted * d_inverted, y_acceleration_delta);
+
+        workgroup_x_coordinate = subgroupShuffleXor(workgroup_x_coordinate, subgroup_id); 
+        workgroup_y_coordinate = subgroupShuffleXor(workgroup_y_coordinate, subgroup_id); 
+        workgroup_masse = subgroupShuffleXor(workgroup_masse, subgroup_id); 
+    }
+
+    partial_y_forces[gl_WorkGroupID.y + gl_GlobalInvocationID.x * gl_NumWorkGroups.y] = y_acceleration_delta;
+    partial_x_forces[gl_WorkGroupID.y + gl_GlobalInvocationID.x * gl_NumWorkGroups.y] = x_acceleration_delta;
+    
+} 

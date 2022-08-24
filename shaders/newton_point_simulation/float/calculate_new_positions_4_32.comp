@@ -5,8 +5,10 @@
 #extension GL_ARB_gpu_shader_fp64 : enable
 
 
+/* I hope someday we could use gl_SubgroupSize as local_size */
+#define SUBGROUP_SIZE 32
 // The execution structure
-layout (local_size_x = 64) in;
+layout (local_size_x = SUBGROUP_SIZE) in;
 
 
 // The buffers are provided via the tensors
