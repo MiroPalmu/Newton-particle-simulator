@@ -208,13 +208,8 @@ void NewtonPointSimulation<float>::evolve_with_gpu_4() {
         std::vector<std::string> { "GL_KHR_shader_subgroup_basic", "GL_ARB_gpu_shader_fp64" };
     kp::Manager mgr(0, {}, desired_extensions);
 
-    const auto subgroup_size =
-        mgr.listDevices()
-            .front()
-            .getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceSubgroupProperties>()
-            .get<vk::PhysicalDeviceSubgroupProperties>()
-            .subgroupSize;
 
+    fmt::print("{}", pasimulations::tools::subgroup_size(mgr));
 
     const auto particles = static_cast<uint32_t>(x_coordinates_.size());
     /* This needs to be kept up to date with gpu_2.comp */
