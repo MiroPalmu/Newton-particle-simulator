@@ -238,7 +238,13 @@ class NewtonPointSimulation {
     * Set workgropu size to 64 (and used some build-in functions)
      */
     void evolve_with_gpu_3();
-
+    /*
+    Properties:
+    * Tried to do divide the force calculations to small parts and
+      add the parts of the force in the end to make the calculation more
+      cache friendly but it did not make it faster than gpu_3 
+    */
+ 
     void evolve_with_gpu_4();
 };
 
