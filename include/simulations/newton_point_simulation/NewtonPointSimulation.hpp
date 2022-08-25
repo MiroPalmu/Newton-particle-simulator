@@ -40,7 +40,7 @@ using namespace units;
 using namespace units::isq;
 
 template <std::floating_point Real>
-class NewtonPointSimulation {
+class NewtonPointSimulation : public pasimulations::tools::TimerFunctionality {
     // We assume that everything is in SI units in NewtonPointSimulation
   public:
     using Real_vec = std::vector<Real>;
@@ -58,11 +58,6 @@ class NewtonPointSimulation {
     Real softening_radius_ { 0.1 };
 
     Real G_ { 0.34 }; // Real value: 6.6743e-11
-
-    using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-    time_point timing_clock_;
-    std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
-
     static constexpr Real default_draw_area_side_length_ { 10.0 };
 
   public:
@@ -75,28 +70,6 @@ class NewtonPointSimulation {
 
         Example of this is draw function.
      */
-    void start_clock() { timing_clock_ = std::chrono::steady_clock::now(); }
-
-    void stop_clock() {
-        const auto end_clock_time_ = std::chrono::steady_clock::now();
-
-        std::ranges::rotate(last_n_clocked_times_, last_n_clocked_times_.begin() + 1);
-        last_n_clocked_times_.back() =
-            std::chrono::duration_cast<std::chrono::milliseconds>(end_clock_time_ - timing_clock_);
-    }
-
-    std::chrono::milliseconds calculation_time_average_() {
-        std::chrono::milliseconds sum_of_clocked_times {};
-
-        for (auto time : last_n_clocked_times_) {
-            sum_of_clocked_times += time;
-        }
-
-        const auto average_over_last_n_times_in_ms_ =
-            double(sum_of_clocked_times.count()) / double(last_n_clocked_times_.size());
-
-        return std::chrono::milliseconds(size_t(average_over_last_n_times_in_ms_));
-    }
 
     void set_x_coordinates_from_reals(const Real_vec& x_coordinates) { x_coordinates_ = x_coordinates; }
     void set_y_coordinates_from_reals(const Real_vec& y_coordinates) { y_coordinates_ = y_coordinates; }
@@ -113,7 +86,6 @@ class NewtonPointSimulation {
 
         fmt::print("{}", ansi::str(ansi::cursorhoriz(0)));
     }
-    
 
     void print_info_of_particle(gsl::index i) {
         std::cout << "i: " << i << "\nmass: " << masses_[i] << "\n";

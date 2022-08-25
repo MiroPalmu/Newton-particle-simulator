@@ -1,9 +1,9 @@
 #pragma once
+#include <concepts>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
-#include <concepts>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -49,6 +49,37 @@ inline const std::integral auto subgroup_size(const kp::Manager& manager) {
         .get<vk::PhysicalDeviceSubgroupProperties>()
         .subgroupSize;
 }
+
+class TimerFunctionality {
+  protected:
+    using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+    time_point timing_clock_;
+    std::array<std::chrono::milliseconds, 5> last_n_clocked_times_ {};
+
+  public:
+    void start_clock() { timing_clock_ = std::chrono::steady_clock::now(); }
+
+    void stop_clock() {
+        const auto end_clock_time_ = std::chrono::steady_clock::now();
+
+        std::ranges::rotate(last_n_clocked_times_, last_n_clocked_times_.begin() + 1);
+        last_n_clocked_times_.back() =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_clock_time_ - timing_clock_);
+    }
+
+    std::chrono::milliseconds calculation_time_average_() {
+        std::chrono::milliseconds sum_of_clocked_times {};
+
+        for (auto time : last_n_clocked_times_) {
+            sum_of_clocked_times += time;
+        }
+
+        const auto average_over_last_n_times_in_ms_ =
+            double(sum_of_clocked_times.count()) / double(last_n_clocked_times_.size());
+
+        return std::chrono::milliseconds(size_t(average_over_last_n_times_in_ms_));
+    }
+};
 
 } // namespace tools
 } // namespace pasimulations
