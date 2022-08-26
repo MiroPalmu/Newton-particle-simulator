@@ -14,11 +14,11 @@
 #include <pasimulations.hpp>
 #include <tools.hpp>
 
-/* 
+/*
     We resolve positional cl options in main.cpp and pass them froward,
     because it is assumed that without one program can not be run.
 
-    Other options are made into optionals, because working with default 
+    Other options are made into optionals, because working with default
     and implicite values is not nice.
 
     Except for boolean options
@@ -26,7 +26,7 @@
 
 int main(int argc, char* argv[]) {
     try {
-        
+
         auto options = cxxopts::Options("pasimulations", "Collection of simulations");
 
         // This needs to be held up to date manually
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
         const auto number_of_particles = parse_optional_option("number_of_particles", int {});
         const auto seed = parse_optional_option("seed", double {});
         const auto timesteps = parse_optional_option("timesteps", int {});
-        
+
         /* Boolean options: */
         const auto disable_draw = result["disable_draw"].as<bool>();
 
@@ -82,24 +82,23 @@ int main(int argc, char* argv[]) {
         } else {
             switch (pasimulations::tools::hash(result["simulation"].as<std::string>())) {
             case pasimulations::tools::hash("newton_point_simulation"): {
-                std::optional<pasimulations::Newton_point_simulation_implementations> implementation {};
+                std::optional<pasimulations::NewtonPointSimulationImplementations> implementation {};
 
                 switch (pasimulations::tools::hash(result["runtype"].as<std::string>())) {
                 case pasimulations::tools::hash("cpu_1"): {
-                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::cpu_1);
-
+                    implementation = std::make_optional(pasimulations::NewtonPointSimulationImplementations::cpu_1);
                 } break;
                 case pasimulations::tools::hash("gpu_1"): {
-                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_1);
+                    implementation = std::make_optional(pasimulations::NewtonPointSimulationImplementations::gpu_1);
                 } break;
                 case pasimulations::tools::hash("gpu_2"): {
-                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_2);
+                    implementation = std::make_optional(pasimulations::NewtonPointSimulationImplementations::gpu_2);
                 } break;
                 case pasimulations::tools::hash("gpu_3"): {
-                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_3);
+                    implementation = std::make_optional(pasimulations::NewtonPointSimulationImplementations::gpu_3);
                 } break;
                 case pasimulations::tools::hash("gpu_4"): {
-                    implementation = std::make_optional(pasimulations::Newton_point_simulation_implementations::gpu_4);
+                    implementation = std::make_optional(pasimulations::NewtonPointSimulationImplementations::gpu_4);
                 } break;
                 }
 
@@ -110,14 +109,18 @@ int main(int argc, char* argv[]) {
                     print_not_implemented_error("runtype", { "cpu_1", "gpu_1", "gpu_2", "gpu_3" });
                 }
             } break;
+            case pasimulations::tools::hash("newton_point_simulation_2"): {
+
+            } break;
             default: {
                 print_not_implemented_error("simulation", simulation_names_for_help);
             } break;
             }
+            }
         }
-    } catch (const std::exception& e) {
-        std::cout << "error parsing options: " << e.what() << std::endl;
-        return 1;
+        catch (const std::exception& e) {
+            std::cout << "error parsing options: " << e.what() << std::endl;
+            return 1;
+        }
+        return 0;
     }
-    return 0;
-}

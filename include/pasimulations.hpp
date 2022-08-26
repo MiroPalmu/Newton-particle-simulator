@@ -18,10 +18,10 @@
 
 namespace pasimulations {
 
-enum class Newton_point_simulation_implementations { cpu_1, gpu_1, gpu_2, gpu_3, gpu_4 };
+enum class NewtonPointSimulationImplementations { cpu_1, gpu_1, gpu_2, gpu_3, gpu_4 };
 
 template <std::integral I>
-void run_newton_point_simulation_test(const Newton_point_simulation_implementations implementation,
+void run_newton_point_simulation_test(const NewtonPointSimulationImplementations implementation,
                                       const std::optional<I> optional_number_of_particles = std::optional<I> {},
                                       const std::optional<double> seed = std::optional<double> {},
                                       const std::optional<I> optional_simulated_timesteps = std::optional<I> {},
@@ -75,19 +75,19 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
     for ([[maybe_unused]] const auto _ : std::ranges::iota_view(0, simulated_timesteps)) {
         simulator.start_clock();
         switch (implementation) {
-        case Newton_point_simulation_implementations::cpu_1:
+        case NewtonPointSimulationImplementations::cpu_1:
             simulator.evolve_with_cpu_1();
             break;
-        case Newton_point_simulation_implementations::gpu_1:
+        case NewtonPointSimulationImplementations::gpu_1:
             simulator.evolve_with_gpu_1();
             break;
-        case Newton_point_simulation_implementations::gpu_2:
+        case NewtonPointSimulationImplementations::gpu_2:
             simulator.evolve_with_gpu_2();
             break;
-        case Newton_point_simulation_implementations::gpu_3:
+        case NewtonPointSimulationImplementations::gpu_3:
             simulator.evolve_with_gpu_3();
             break;
-        case Newton_point_simulation_implementations::gpu_4:
+        case NewtonPointSimulationImplementations::gpu_4:
             simulator.evolve_with_gpu_4();
             break;
         }
@@ -99,4 +99,6 @@ void run_newton_point_simulation_test(const Newton_point_simulation_implementati
         }
     }
 }
+
+void run_newton_particle_simulation_2();
 } // namespace pasimulations
