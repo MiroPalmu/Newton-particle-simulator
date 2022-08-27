@@ -2,6 +2,8 @@
 #include <concepts>
 #include <filesystem>
 #include <fstream>
+#include <optional>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -79,6 +81,18 @@ class TimerFunctionality {
 
         return std::chrono::milliseconds(size_t(average_over_last_n_times_in_ms_));
     }
+};
+
+template <std::floating_point R, std::integral I>
+[[nodiscard]] std::vector<R>
+generate_N_numbers_from_uniform_distributions(const I N, const R lower_bound = R { 0 }, const R upper_bound = R { 0 },
+                                              const auto generator = std::mt19937 { std::random_device {} }) {
+    std::uniform_real_distribution<> uniform_distribution(lower_bound, upper_bound);
+    auto numbers = std::vector(N);
+    for (auto& element : numbers) {
+        element = uniform_distribution(generator);
+    }
+    return numbers;
 };
 
 } // namespace tools
