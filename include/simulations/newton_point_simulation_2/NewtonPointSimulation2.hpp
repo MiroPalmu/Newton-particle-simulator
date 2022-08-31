@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -36,34 +37,37 @@
 namespace pasimulations {
 
 namespace nps {
+
 using namespace units;
 using namespace units::isq;
 
 template <std::floating_point Real>
 class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
-    // We assume that everything is in SI units in NewtonPointSimulation
+    /*
+        We assume that lengths and masses is in N-body units in NewtonPointSimulation2
+        Everything else is in SI
+
+        When givin data to nps2 it has to be staged first and then synced with gpu
+    */
   public:
     using Real_vec = std::vector<Real>;
 
   private:
-    Real_vec x_coordinates_ {};
-    Real_vec y_coordinates_ {};
-    Real_vec x_speeds_ {};
-    Real_vec y_speeds_ {};
-    Real_vec masses_ {};
-    Real simulation_time_ { 0.0 };
+    const std::vector<std::string> desired_extensions { "GL_KHR_shader_subgroup_basic", "GL_ARB_gpu_shader_fp64",
+                                                        "GL_KHR_shader_subgroup_shuffle" };
+    kp::Manager manager = kp::Manager(0, {}, desired_extensions);
 
-    Real timestep_ { 1 };
+    std::shared_ptr<kp::TensorT<Real>> tensor_x_coordinates_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_y_coordinates_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_z_coordinates_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_x_speeds_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_y_speeds_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_z_speeds_ {};
+    std::shared_ptr<kp::TensorT<Real>> tensor_masses_ {};
 
-    Real softening_radius_ { 0.1 };
-
-    Real G_ { 0.34 }; // Real value: 6.6743e-11
-
-    static constexpr Real default_draw_area_side_length_ { 10.0 };
+    size_t number_of_particles_ { 0 };
 
   public:
-
-
     /*
         This is the unsafe way to load data to simulation.
         There should be version of these that uses mp-units as
@@ -73,16 +77,83 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
 
         Example of this is draw function.
      */
- 
 
-/* 
-     These need to be checked how they will work in nps2
-    (and maybe to move the defenitions to cpp, oh wait we cant because the class is template)
-    we could only move the gpu calculations to cpp file because they are defined for spesific
-    floating point type
-*/
+    /*
+         These need to be checked how they will work in nps2
+        (and maybe to move the defenitions to cpp, oh wait we cant because the class is template)
+        we could only move the gpu calculations to cpp file because they are defined for spesific
+        floating point type
+    */
 
-    // void set_x_coordinates_from_reals(const Real_vec& x_coordinates) { x_coordinates_ = x_coordinates; }
+    template <Length L, Speed V, Mass M>
+    void stage_initial_conditions(const std::vector<L>&& x_coordinates, const std::vector<L>&& y_coordinates,
+                                  const std::vector<L>&& z_coordinates, const std::vector<V>&& x_speeds,
+                                  const std::vector<V>&& y_speeds, const std::vector<V>&& z_speeds,
+                                  const std::vector<M>&& masses) {
+        assert(x_coordinates.size() == y_coordinates.size() == z_coordinates.size() == x_speeds.size() ==
+               y_speeds.size() == z_speeds.size() == masses.size());
+        /*
+            We will first convert to work units to calculate the nbody units and then convert to those
+         */
+
+        number_of_particles_ = x_coordinates.size();
+        const auto nbody_mass_unit_in_si =
+            units::quantity_cast<si::kilogram>(
+                std::accumulate(masses.begin(), masses.end(), si::mass<si::kilogram> { 0.0 }))
+                .number();
+
+        const auto nbody_length_unit_inverse_in_si = double { 0.0 };
+
+        for (const auto i : std::ranges::iota_view(0, number_of_particles_ - 1)) {
+            for (const auto j : std::ranges::iota_view(i + 1, number_of_particles_)) {
+                const auto dx = units::quantity_cast<si::metre>(x_coordinates[i] - x_coordinates[j]).number();
+                const auto dy = units::quantity_cast<si::metre>(y_coordinates[i] - y_coordinates[j]).number();
+                const auto dz = units::quantity_cast<si::metre>(z_coordinates[i] - z_coordinates[j]).number();
+
+                const auto dr = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+                nbody_length_unit_inverse_in_si +=
+                    2.0 * units::quantity_cast<si::kilogram>(masses[i] * masses[j]).number() / dr;
+            }
+        }
+        nbody_length_unit_inverse_in_si /= nbody_mass_unit_in_si * nbody_mass_unit_in_si;
+
+        auto length_to_nbody_units = [&](const Length auto x) {
+            return units::quantity_cast<si::metre>(x).number() * nbody_length_unit_inverse_in_si;
+        };
+
+        auto mass_to_nbody_units = [&](const Mass auto m) {
+            return units::quantity_cast<si::kilogram>(m).number() / nbody_mass_unit_in_si;
+        };
+
+        auto speed_to_nbody_units = [&](const Speed auto v) {
+            return units::quantity_cast<si::metre_per_second>(v).number() * nbody_length_unit_inverse_in_si;
+        };
+
+        auto x_coordinates_in_nbody_units = Real_vec(number_of_particles_);
+        auto y_coordinates_in_nbody_units = Real_vec(number_of_particles_);
+        auto z_coordinates_in_nbody_units = Real_vec(number_of_particles_);
+        auto x_speeds_in_nbody_units = Real_vec(number_of_particles_);
+        auto y_speeds_in_nbody_units = Real_vec(number_of_particles_);
+        auto z_speeds_in_nbody_units = Real_vec(number_of_particles_);
+        auto masses_in_nbody_units = Real_vec(number_of_particles_);
+
+        std::ranges::transform(x_coordinates, x_coordinates_in_nbody_units.begin(), length_to_nbody_units);
+        std::ranges::transform(y_coordinates, y_coordinates_in_nbody_units.begin(), length_to_nbody_units);
+        std::ranges::transform(z_coordinates, z_coordinates_in_nbody_units.begin(), length_to_nbody_units);
+        std::ranges::transform(x_speeds, x_speeds_in_nbody_units.begin(), speed_to_nbody_units);
+        std::ranges::transform(y_speeds, y_speeds_in_nbody_units.begin(), speed_to_nbody_units);
+        std::ranges::transform(z_speeds, z_speeds_in_nbody_units.begin(), speed_to_nbody_units);
+        std::ranges::transform(masses, masses_in_nbody_units.begin(), mass_to_nbody_units);
+
+        tensor_x_coordinates_.rebuild(x_coordinates.data(), number_of_particles_, sizeof(Real));
+        tensor_y_coordinates_.rebuild(y_coordinates.data(), number_of_particles_, sizeof(Real));
+        tensor_z_coordinates_.rebuild(z_coordinates.data(), number_of_particles_, sizeof(Real));
+        tensor_x_speeds_.rebuild(x_speeds.data(), number_of_particles_, sizeof(Real));
+        tensor_y_speeds_.rebuild(y_speeds.data(), number_of_particles_, sizeof(Real));
+        tensor_z_speeds_.rebuild(z_speeds.data(), number_of_particles_, sizeof(Real));
+        tensor_masses_.rebuild(masses.data(), number_of_particles_, sizeof(Real));
+    }
     // void set_y_coordinates_from_reals(const Real_vec& y_coordinates) { y_coordinates_ = y_coordinates; }
     // void set_x_speeds_from_reals(const Real_vec& x_speeds) { x_speeds_ = x_speeds; }
     // void set_y_speeds_from_reals(const Real_vec& y_speeds) { y_speeds_ = y_speeds; }
@@ -96,7 +167,6 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
 
     //     fmt::print("{}", ansi::str(ansi::cursorhoriz(0)));
     // }
-    
 
     // void print_info_of_particle(gsl::index i) {
     //     std::cout << "i: " << i << "\nmass: " << masses_[i] << "\n";
@@ -161,8 +231,6 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
 
     //     fmt::print("{}", ansi::str(ansi::cursorup(height_in_pixels)));
     // }
-
-   
 };
 
 } // namespace nps

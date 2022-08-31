@@ -1,7 +1,9 @@
 #pragma once
+#include <cmath>
 #include <concepts>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <optional>
 #include <random>
 #include <string>
@@ -84,15 +86,41 @@ class TimerFunctionality {
 };
 
 template <std::floating_point R, std::integral I>
-[[nodiscard]] std::vector<R>
-generate_N_numbers_from_uniform_distributions(const I N, const R lower_bound = R { 0 }, const R upper_bound = R { 0 },
-                                              const auto generator = std::mt19937 { std::random_device {} }) {
+[[nodiscard]] std::vector<R> generate_N_numbers_from_uniform_distributions(const I N, auto& generator,
+                                                                           const R lower_bound = R { 0 },
+                                                                           const R upper_bound = R { 1 }) {
     std::uniform_real_distribution<> uniform_distribution(lower_bound, upper_bound);
     auto numbers = std::vector(N);
     for (auto& element : numbers) {
         element = uniform_distribution(generator);
     }
     return numbers;
+};
+
+void repeate_n_times(std::integral auto n, const std::invocable auto& f) {
+    for (auto amount = n; amount; --amount)
+        [[likely]] { std::invoke(f); }
+}
+
+template <typename T, typename R>
+concept scalar = std::floating_point<R> && requires(T x, R y) {
+    { x* y } -> std::same_as<T>;
+    { y* x } -> std::same_as<T>;
+    { x + x } -> std::same_as<T>;
+};
+
+template <scalar<double> S>
+struct vec3 {
+    S x;
+    S y;
+    S z;
+
+    // ISO 80000-2:2019 convention
+    static constexpr auto create_from_polar_coordinates(const double theta, const double psi,
+                                                        const S radius = 1.0) noexcept {
+        return vec3 { radius * std::cos(psi) * std::sin(theta), radius * std::sin(psi) * std::sin(theta),
+                      radius * std::cos(theta) };
+    }
 };
 
 } // namespace tools
