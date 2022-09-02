@@ -113,7 +113,7 @@ enum class NewtonPointSimulation2Integrators { euler };
 
 template <std::integral I, units::isq::Length L, units::isq::Speed V, units::isq::Mass M>
 void run_newton_point_simulation_2(
-[[maybe_unused]]    const NewtonPointSimulation2Integrators integrator,
+    [[maybe_unused]] const NewtonPointSimulation2Integrators integrator,
     const std::optional<Distributions> optional_initial_position_distribution = std::optional<Distributions> {},
     const std::optional<Distributions> optional_initial_velocity_distribution = std::optional<Distributions> {},
     const std::optional<Distributions> optional_initial_mass_distribution = std::optional<Distributions> {},
@@ -130,7 +130,7 @@ void run_newton_point_simulation_2(
     using LengthUnit = si::metre;
     using SpeedUnit = si::metre_per_second;
     using MassUnit = si::kilogram;
-//    using TimeUnit = si::second;
+    //    using TimeUnit = si::second;
 
     const auto initial_position_distribution =
         optional_initial_position_distribution.value_or(Distributions::normal_distribution);
@@ -212,6 +212,12 @@ void run_newton_point_simulation_2(
         });
     }
     }
+
+    auto simulation = pasimulations::nps::NewtonPointSimulation2<double> {};
+    simulation.stage_initial_conditions_to_tensors(std::move(initial_x_coordinates), std::move(initial_y_coordinates),
+                                        std::move(initial_z_coordinates), std::move(initial_x_speeds),
+                                        std::move(initial_y_speeds), std::move(initial_z_speeds),
+                                        std::move(initial_masses));
 }
 
 } // namespace pasimulations

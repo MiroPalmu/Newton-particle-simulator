@@ -30,3 +30,9 @@ To make Kompute work with meson build system one has to:
 
 
 I don't know how much importing vulkan and fmt with meson escpeially importing fmt twiche. With meson and with conan.
+
+
+
+
+
+Tensor rebuild is broken??

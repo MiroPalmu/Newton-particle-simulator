@@ -1,3 +1,4 @@
+
 #pragma once
 #include <algorithm>
 #include <array>
@@ -57,13 +58,13 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
                                                         "GL_KHR_shader_subgroup_shuffle" };
     kp::Manager manager = kp::Manager(0, {}, desired_extensions);
 
-    std::shared_ptr<kp::TensorT<Real>> tensor_x_coordinates_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_y_coordinates_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_z_coordinates_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_x_speeds_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_y_speeds_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_z_speeds_ {};
-    std::shared_ptr<kp::TensorT<Real>> tensor_masses_ {};
+    std::weak_ptr<kp::TensorT<Real>> tensor_y_coordinates_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_x_coordinates_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_z_coordinates_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_x_speeds_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_y_speeds_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_z_speeds_ = manager.tensorT<Real>({ 0 });
+    std::weak_ptr<kp::TensorT<Real>> tensor_masses_ = manager.tensorT<Real>({ 0 });
 
     size_t number_of_particles_ { 0 };
 
@@ -86,13 +87,13 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
     */
 
     template <Length L, Speed V, Mass M>
-    void stage_initial_conditions(const std::vector<L>&& x_coordinates, const std::vector<L>&& y_coordinates,
+    void stage_initial_conditions_to_tensors(const std::vector<L>&& x_coordinates, const std::vector<L>&& y_coordinates,
                                   const std::vector<L>&& z_coordinates, const std::vector<V>&& x_speeds,
                                   const std::vector<V>&& y_speeds, const std::vector<V>&& z_speeds,
                                   const std::vector<M>&& masses) {
+        /*
         assert(x_coordinates.size() == y_coordinates.size() == z_coordinates.size() == x_speeds.size() ==
                y_speeds.size() == z_speeds.size() == masses.size());
-        /*
             We will first convert to work units to calculate the nbody units and then convert to those
          */
 
@@ -102,18 +103,18 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
                 std::accumulate(masses.begin(), masses.end(), si::mass<si::kilogram> { 0.0 }))
                 .number();
 
-        const auto nbody_length_unit_inverse_in_si = double { 0.0 };
+        auto nbody_length_unit_inverse_in_si = double { 0.0 };
 
-        for (const auto i : std::ranges::iota_view(0, number_of_particles_ - 1)) {
-            for (const auto j : std::ranges::iota_view(i + 1, number_of_particles_)) {
+        for (const auto i : std::ranges::iota_view(size_t(0), number_of_particles_ - 1)) {
+            for (const auto j : std::ranges::iota_view(size_t(i + 1), number_of_particles_)) {
                 const auto dx = units::quantity_cast<si::metre>(x_coordinates[i] - x_coordinates[j]).number();
                 const auto dy = units::quantity_cast<si::metre>(y_coordinates[i] - y_coordinates[j]).number();
                 const auto dz = units::quantity_cast<si::metre>(z_coordinates[i] - z_coordinates[j]).number();
 
                 const auto dr = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-                nbody_length_unit_inverse_in_si +=
-                    2.0 * units::quantity_cast<si::kilogram>(masses[i] * masses[j]).number() / dr;
+                nbody_length_unit_inverse_in_si += 2.0 * units::quantity_cast<si::kilogram>(masses[i]).number() *
+                                                   units::quantity_cast<si::kilogram>(masses[j]).number() / dr;
             }
         }
         nbody_length_unit_inverse_in_si /= nbody_mass_unit_in_si * nbody_mass_unit_in_si;
@@ -146,13 +147,19 @@ class NewtonPointSimulation2 : pasimulations::tools::TimerFunctionality {
         std::ranges::transform(z_speeds, z_speeds_in_nbody_units.begin(), speed_to_nbody_units);
         std::ranges::transform(masses, masses_in_nbody_units.begin(), mass_to_nbody_units);
 
-        tensor_x_coordinates_.rebuild(x_coordinates.data(), number_of_particles_, sizeof(Real));
-        tensor_y_coordinates_.rebuild(y_coordinates.data(), number_of_particles_, sizeof(Real));
-        tensor_z_coordinates_.rebuild(z_coordinates.data(), number_of_particles_, sizeof(Real));
-        tensor_x_speeds_.rebuild(x_speeds.data(), number_of_particles_, sizeof(Real));
-        tensor_y_speeds_.rebuild(y_speeds.data(), number_of_particles_, sizeof(Real));
-        tensor_z_speeds_.rebuild(z_speeds.data(), number_of_particles_, sizeof(Real));
-        tensor_masses_.rebuild(masses.data(), number_of_particles_, sizeof(Real));
+            std::cout << fmt::format("{}\n\n", fmt::join(x_coordinates_in_nbody_units, " "));
+        std::cout << "Moi" << std::endl;
+        std::cout << fmt::format("{}", fmt::join(y_coordinates_in_nbody_units, " "));
+        std::cout << "Moi2" << std::endl;
+
+//        tensor_x_coordinates_->rebuild((void*)x_coordinates_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        std::cout << "Moi3" << std::endl;
+//        tensor_y_coordinates_->rebuild((void*)y_coordinates_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        tensor_z_coordinates_->rebuild((void*)z_coordinates_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        tensor_x_speeds_->rebuild((void*)x_speeds_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        tensor_y_speeds_->rebuild((void*)y_speeds_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        tensor_z_speeds_->rebuild((void*)z_speeds_in_nbody_units.data(), number_of_particles_, sizeof(Real));
+//        tensor_masses_->rebuild((void*)masses_in_nbody_units.data(), number_of_particles_, sizeof(Real));
     }
     // void set_y_coordinates_from_reals(const Real_vec& y_coordinates) { y_coordinates_ = y_coordinates; }
     // void set_x_speeds_from_reals(const Real_vec& x_speeds) { x_speeds_ = x_speeds; }
