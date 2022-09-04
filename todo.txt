@@ -7,6 +7,13 @@ Longterm todo:
 4. GPU 2 ie. GPU version of CPU 2
 
 
+
 Comparisons between different command line options:
 https://attractivechaos.wordpress.com/2018/08/31/a-survey-of-argument-parsing-libraries-in-c-c/
 https://cpp.libhunt.com/cxxopts-alternatives
+
+
+Got side tracked to do command line options and NBODY6++GPU
+
+Found this https://github.com/KhronosGroup/Vulkan-Guide that should be read next 
+Then compare read what kompute parts are from Vulkan spec
