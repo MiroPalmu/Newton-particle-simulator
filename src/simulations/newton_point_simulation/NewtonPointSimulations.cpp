@@ -43,6 +43,7 @@ void NewtonPointSimulation<float>::evolve_with_gpu_1() {
     mgr.sequence()
         ->record<kp::OpTensorSyncDevice>(parameters_for_speed_shader)
         ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { timestep_ })
+        ->eval()
         ->record<kp::OpAlgoDispatch>(calculate_new_positions, std::vector<float> { timestep_ })
         ->record<kp::OpTensorSyncLocal>(parameters_for_speed_shader)
         ->eval();
@@ -111,6 +112,7 @@ void NewtonPointSimulation<float>::evolve_with_gpu_2() {
     mgr.sequence()
         ->record<kp::OpTensorSyncDevice>(parameters_for_speed_shader)
         ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { softening_radius_, G_, timestep_ })
+        ->eval()
         ->record<kp::OpAlgoDispatch>(calculate_new_positions, std::vector<float> { timestep_ })
         ->record<kp::OpTensorSyncLocal>(parameters_for_position_shader)
         ->eval();
@@ -184,6 +186,7 @@ void NewtonPointSimulation<float>::evolve_with_gpu_3() {
     mgr.sequence()
         ->record<kp::OpTensorSyncDevice>(parameters_for_speed_shader)
         ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { softening_radius_, G_, timestep_ })
+        ->eval()
         ->record<kp::OpAlgoDispatch>(calculate_new_positions, std::vector<float> { timestep_ })
         ->record<kp::OpTensorSyncLocal>(parameters_for_position_shader)
         ->eval();
@@ -292,6 +295,7 @@ void NewtonPointSimulation<float>::evolve_with_gpu_4() {
         ->record<kp::OpTensorSyncDevice>(sync_in_beginning)
         ->record<kp::OpAlgoDispatch>(calculate_forces, std::vector<float> { softening_radius_, G_ })
         ->record<kp::OpAlgoDispatch>(calculate_speeds, std::vector<float> { timestep_ })
+        ->eval()
         ->record<kp::OpAlgoDispatch>(calculate_new_positions, std::vector<float> { timestep_ })
         ->record<kp::OpTensorSyncLocal>(sync_in_the_end)
         ->eval();
